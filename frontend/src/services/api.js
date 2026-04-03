@@ -1,9 +1,31 @@
 /**
- * Mock API service — replace with real fetch calls when backend is ready.
- * All functions return Promises to simulate real async behaviour.
+ * API service — connects to FastAPI backend at localhost:8000
+ * Mock functions are kept for the track endpoint until backend is wired up.
  */
 
+const BASE_URL = 'http://localhost:8000'
 const delay = (ms = 1200) => new Promise(res => setTimeout(res, ms))
+
+/**
+ * POST /api/v1/submit-plain
+ * New no-encryption endpoint. Payload: { description, image (base64), url }
+ */
+export async function submitReportPlain({ description, image, url }) {
+  const response = await fetch(`${BASE_URL}/api/v1/submit-plain`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ description, image, url }),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.detail || `Server error: ${response.status}`)
+  }
+
+  return response.json()
+}
+
+
 
 // Simulated case database (in-memory, resets on reload)
 const mockCases = {

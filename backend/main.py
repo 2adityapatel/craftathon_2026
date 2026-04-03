@@ -2,12 +2,16 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from crypto.keys import get_public_key_pem
-from models.schemas import PublicAuthKeyResponse, SubmitReportRequest, SubmitReportResponse, TrackCaseResponse
+from models.schemas import PublicAuthKeyResponse, SubmitReportRequest, SubmitReportResponse, TrackCaseResponse, PlainSubmitRequest
 from services.privacy_service import PrivacyService
 from services.ai_analysis_service import AIAnalysisService
 from services.report_service import ReportService
+from services.pinata_service import upload_image_bytes, upload_json
+from services.blockchain_service import anchor_report_on_chain
 from storage.database import SessionLocal, Case
 import hashlib
+import base64
+import json
 app = FastAPI(title="POCSO Blockchain Reporting System", version="1.0.0")
 
 # CORS Setup
@@ -37,20 +41,27 @@ def get_public_key():
 @app.post("/api/v1/submit", response_model=SubmitReportResponse)
 async def submit_report(payload: SubmitReportRequest):
     """
-    1. Decrypt AES key & Payload
+    1. Decrypt AES key & Payload (TEMPORARILY COMMENTED FOR TESTING)
     2. Run AI Scoring
     3. Generate case ID & case Key
     4. Save to DB
     """
     try:
-        # Step 1: Decrypt and Verify
-        clean_payload = PrivacyService.decrypt_and_verify(
-            encrypted_payload=payload.encrypted_payload,
-            encrypted_aes_key=payload.encrypted_aes_key,
-            original_hash=payload.original_hash,
-            aes_iv=payload.aes_iv,
-            aes_tag=payload.aes_tag
-        )
+        # --- ENCRYPTION BYPASS (TEMPORARY) ---
+        if payload.plain_payload:
+            clean_payload = payload.plain_payload.encode()
+            report_hash = hashlib.sha256(clean_payload).hexdigest()
+        else:
+            # Original encryption logic (commented out for now)
+            # clean_payload = PrivacyService.decrypt_and_verify(
+            #     encrypted_payload=payload.encrypted_payload,
+            #     encrypted_aes_key=payload.encrypted_aes_key,
+            #     original_hash=payload.original_hash,
+            #     aes_iv=payload.aes_iv,
+            #     aes_tag=payload.aes_tag
+            # )
+            # report_hash = payload.original_hash
+            raise HTTPException(status_code=400, detail="Encryption is disabled for this test. Please use plain_payload.")
         
         # Step 2: AI Analysis
         analysis_results = await AIAnalysisService.analyze_evidence(
@@ -68,7 +79,7 @@ async def submit_report(payload: SubmitReportRequest):
             evidence_type=payload.evidence_type,
             analysis_results=analysis_results,
             ipfs_cid=mock_ipfs,
-            evidence_hash=payload.original_hash,
+            evidence_hash=report_hash,
             blockchain_tx=mock_tx
         )
         
@@ -80,7 +91,7 @@ async def submit_report(payload: SubmitReportRequest):
             risk_score=analysis_results["risk_score"],
             threat_level=analysis_results["threat_level"],
             category=analysis_results["category"],
-            message="Report highly secured and saved successfully. Keep your case key safe!"
+            message="[DEBUG MODE] Report saved without encryption. Keep your case key safe!"
         )
         
     except ValueError as val_e:
@@ -115,3 +126,116 @@ def track_report(case_id: str, case_key: str):
         )
     finally:
         db.close()
+
+
+# ── NEW: Plain Submit (no encryption) ────────────────────────────────────────
+@app.post("/api/v1/submit-plain", response_model=SubmitReportResponse)
+async def submit_plain(payload: PlainSubmitRequest):
+    """
+    New simplified endpoint:
+    1. Accepts { description, image (base64), url } — no encryption required
+    2. Uploads image to Pinata IPFS (if provided)
+    3. Uploads metadata JSON to Pinata IPFS
+    4. Runs AI analysis on the combined content
+    5. Saves to DB
+    6. Anchors on Sepolia blockchain
+    """
+    try:
+        image_bytes = None
+        if payload.image:
+            image_bytes = base64.b64decode(payload.image)
+
+        # ── Step 1: Preliminary evidence typing and AI Analysis ───────────
+        description_text = payload.description or ""
+        
+        if payload.url:
+            if description_text:
+                description_text += f"\nURL : {payload.url}"
+            else:
+                description_text = payload.url
+
+        has_text = bool(description_text.strip())
+        has_image = bool(image_bytes)
+
+        if has_text and has_image:
+            evidence_type = "mixed"
+            ai_content = image_bytes
+        elif has_image:
+            evidence_type = "image"
+            ai_content = image_bytes
+        elif has_text:
+            evidence_type = "text"
+            ai_content = description_text.encode()
+        else:
+            evidence_type = "text"
+            ai_content = b"no content"
+
+        try:
+            analysis_results = await AIAnalysisService.analyze_evidence(
+                evidence_type=evidence_type,
+                content=ai_content,
+                description=description_text,
+            )
+        except Exception as ai_err:
+            raise HTTPException(status_code=500, detail=f"AI Analysis Failed: {str(ai_err)}")
+
+        # ── Step 2: Upload to Pinata (only after AI success) ──────────────
+        image_ipfs_cid = None
+        if image_bytes:
+            image_ipfs_cid = upload_image_bytes(image_bytes, filename="evidence.jpg")
+
+        metadata = {
+            "description": payload.description or "",
+            "url": payload.url or "",
+            "image_cid": image_ipfs_cid or "",
+        }
+        metadata_cid = upload_json(metadata, name="report_metadata")
+
+        # ── Step 3: Compute evidence hash ─────────────────────────────────
+        content_str = json.dumps(metadata, sort_keys=True)
+        evidence_hash = hashlib.sha256(content_str.encode()).hexdigest()
+
+        # ── Step 4: Save to DB ────────────────────────────────────────────
+        from services.report_service import ReportService
+        case_id, case_key = ReportService.create_report(
+            evidence_type=evidence_type,
+            analysis_results=analysis_results,
+            ipfs_cid=metadata_cid,
+            evidence_hash=evidence_hash,
+            blockchain_tx="pending",
+        )
+
+        # ── Step 5: Anchor on Blockchain ──────────────────────────────────
+        try:
+            blockchain_tx = anchor_report_on_chain(
+                case_id=case_id,
+                ipfs_cid=metadata_cid,
+                risk_score=analysis_results["risk_score"],
+                evidence_hash=evidence_hash,
+                category=analysis_results["category"],
+            )
+            # Update DB with real tx hash
+            db = SessionLocal()
+            try:
+                record = db.query(Case).filter(Case.case_id == case_id).first()
+                if record:
+                    record.blockchain_tx = blockchain_tx
+                    db.commit()
+            finally:
+                db.close()
+        except Exception as chain_err:
+            blockchain_tx = f"chain_error:{str(chain_err)[:60]}"
+
+        return SubmitReportResponse(
+            case_id=case_id,
+            case_key=case_key,
+            blockchain_tx=blockchain_tx,
+            ipfs_cid=metadata_cid,
+            risk_score=analysis_results["risk_score"],
+            threat_level=analysis_results["threat_level"],
+            category=analysis_results["category"],
+            message="Report analyzed, saved to IPFS, and anchored! Keep your case key safe."
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Submission failed: {str(e)}")

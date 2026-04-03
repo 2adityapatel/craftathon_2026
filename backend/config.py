@@ -17,7 +17,8 @@ class Settings(BaseSettings):
     pinata_secret_key: str = ""
     huggingface_token: str = ""
     
-    # Polygon Blockchain
+    # Blockchain (Sepolia)
+    sepolia_rpc_url: str = ""
     contract_address: str = ""
     system_wallet_private_key: str = ""
     
