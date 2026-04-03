@@ -1,10 +1,12 @@
 /**
- * Admin Mock API — replace fetch calls with real backend when ready.
+ * Admin API — connects to the FastAPI backend.
  */
 
-const delay = (ms = 800) => new Promise(r => setTimeout(r, ms))
+const API_BASE_URL = 'http://localhost:8000/api/v1'
 
-// ── Mock data ────────────────────────────────────────────────────────────────
+const delay = (ms = 500) => new Promise(r => setTimeout(r, ms))
+
+// ── Mock data for other functions (to be replaced in Phase 3) ───────────────
 const MOCK_CASES = [
   { case_id: 'POCSO-7F4A2X', status: 'UNDER_REVIEW', threat_level: 'HIGH',     risk_score: 0.74, category: 'harassment',  evidence_type: 'image',      submitted_at: new Date(Date.now() - 3*3600*1000).toISOString(), domain: null,            repeat_offender: false, should_escalate: false, is_duplicate: false },
   { case_id: 'POCSO-3C9K8M', status: 'VERIFIED',     threat_level: 'CRITICAL',  risk_score: 0.93, category: 'CSAM',        evidence_type: 'url',        submitted_at: new Date(Date.now() - 24*3600*1000).toISOString(), domain: 'harmful-site.xyz', repeat_offender: true,  should_escalate: true,  is_duplicate: false },
@@ -34,57 +36,86 @@ let cases = [...MOCK_CASES]
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 export async function adminLogin(username, password) {
-  await delay(900)
-  if (username === 'admin' && password === 'admin123') {
-    const token = 'mock_jwt_' + Date.now()
-    return { token, role: 'authority', username: 'Admin Officer', department: 'Cyber Crime Cell' }
+  const response = await fetch(`${API_BASE_URL}/admin/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json()
+    throw new Error(errorData.detail || 'Access Denied: Invalid credentials.')
   }
-  throw new Error('Invalid credentials. Please check your username and password.')
+
+  const data = await response.json()
+  // Normalizing for frontend: data = { access_token, role, token_type }
+  return { 
+    token: data.access_token, 
+    role: data.role, 
+    username: username, 
+    department: 'Cyber Crime Cell' 
+  }
 }
+
+const getAuthHeader = () => {
+    const user = JSON.parse(sessionStorage.getItem('admin_user'));
+    return user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
+};
 
 // ── Cases ────────────────────────────────────────────────────────────────────
 export async function getCases(filters = {}) {
-  await delay(600)
-  let result = [...cases].sort((a, b) => b.risk_score - a.risk_score)
-  if (filters.priority === 'critical') result = result.filter(c => c.risk_score >= 0.8 || c.should_escalate)
-  if (filters.status) result = result.filter(c => c.status === filters.status)
-  return result
+  const query = new URLSearchParams()
+  if (filters.priority) query.append('priority', filters.priority)
+  if (filters.status) query.append('status', filters.status)
+
+  const response = await fetch(`${API_BASE_URL}/admin/cases?${query.toString()}`, {
+    headers: getAuthHeader()
+  })
+
+  if (!response.ok) throw new Error('Failed to fetch cases.')
+  return await response.json()
 }
 
 export async function getCaseDetail(caseId) {
-  await delay(500)
-  const c = cases.find(c => c.case_id === caseId)
-  if (!c) throw new Error('Case not found')
+  const response = await fetch(`${API_BASE_URL}/admin/case/${caseId}`, {
+    headers: getAuthHeader()
+  })
+
+  if (!response.ok) throw new Error('Case detail not found.')
+  const data = await response.json()
+  
+  // Normalize response
   return {
-    ...c,
-    blockchain_tx: '0xa1b2c3d4e5f67890abcdef1234567890abcdef12',
-    ipfs_cid: 'QmX7k9NbYMpTaqCzv5R3GHnq1N2s3B4KLmParWxY8eUoF',
-    confidence: 0.87,
-    repeat_count: c.repeat_offender ? 4 : 0,
-    history: [
-      { status: 'RECEIVED',     timestamp: c.submitted_at,                                       notes: 'Report received. AI triage completed.',    admin: 'system' },
-      ...(c.status !== 'RECEIVED' ? [{ status: 'UNDER_REVIEW', timestamp: new Date(new Date(c.submitted_at).getTime() + 30*60*1000).toISOString(), notes: 'Assigned to authority for review.', admin: 'admin' }] : []),
-      ...(c.status === 'VERIFIED' || c.status === 'ESCALATED' || c.status === 'ACTION_TAKEN' || c.status === 'CLOSED'
-        ? [{ status: c.status, timestamp: new Date(new Date(c.submitted_at).getTime() + 2*3600*1000).toISOString(), notes: 'Status updated by authority.', admin: 'admin' }] : []),
-    ],
+    ...data.case,
+    history: data.history
   }
 }
 
 export async function updateCaseStatus(caseId, newStatus, notes) {
-  await delay(1200)
-  const idx = cases.findIndex(c => c.case_id === caseId)
-  if (idx === -1) throw new Error('Case not found')
-  cases[idx] = { ...cases[idx], status: newStatus }
-  return {
-    case_id: caseId,
-    status: newStatus,
-    tx: '0x' + Array.from(crypto.getRandomValues(new Uint8Array(20))).map(b => b.toString(16).padStart(2,'0')).join(''),
+  const response = await fetch(`${API_BASE_URL}/admin/case/${caseId}/status`, {
+    method: 'POST',
+    headers: { 
+        ...getAuthHeader(),
+        'Content-Type': 'application/json' 
+    },
+    body: JSON.stringify({ status: newStatus, notes }),
+  })
+
+  if (!response.ok) throw new Error('Failed to update case status.')
+  const data = await response.json()
+  return { 
+    case_id: caseId, 
+    status: newStatus, 
+    tx: data.blockchain_tx 
   }
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 export async function getDashboardStats() {
-  await delay(500)
+  // We can calculate stats from the full case list or create a dedicated endpoint
+  // For simplicity, we'll fetch all cases and calculate
+  const cases = await getCases()
+  
   const total   = cases.length
   const critical = cases.filter(c => c.risk_score >= 0.8).length
   const pending  = cases.filter(c => c.status === 'RECEIVED' || c.status === 'UNDER_REVIEW').length
@@ -93,17 +124,32 @@ export async function getDashboardStats() {
   cases.forEach(c => { byStatus[c.status] = (byStatus[c.status] || 0) + 1 })
   const byCategory = {}
   cases.forEach(c => { byCategory[c.category] = (byCategory[c.category] || 0) + 1 })
+  
   return { total, critical, pending, resolved, byStatus, byCategory }
 }
 
 // ── Domains ───────────────────────────────────────────────────────────────────
 export async function getRepeatOffenders() {
-  await delay(500)
-  return [...MOCK_DOMAINS].sort((a, b) => b.count - a.count)
+  const response = await fetch(`${API_BASE_URL}/admin/domains`, {
+    headers: getAuthHeader()
+  })
+
+  if (!response.ok) throw new Error('Failed to fetch offender data.')
+  return await response.json()
 }
 
 // ── Audit ─────────────────────────────────────────────────────────────────────
 export async function getAuditLog() {
-  await delay(600)
-  return [...MOCK_AUDIT].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+  const response = await fetch(`${API_BASE_URL}/admin/audit`, {
+    headers: getAuthHeader()
+  })
+
+  if (!response.ok) throw new Error('Failed to fetch blockchain audit log.')
+  const data = await response.json()
+  
+  // Format blockchain timestamps (unix) to ISO for frontend
+  return data.map(e => ({
+      ...e,
+      timestamp: new Date(e.timestamp * 1000).toISOString()
+  }))
 }

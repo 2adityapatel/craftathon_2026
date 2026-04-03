@@ -135,7 +135,7 @@ export default function AdminLogin() {
           {/* Demo hint */}
           <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-xs text-blue-700 font-semibold mb-1">🧪 Demo credentials</p>
-            <p className="text-xs text-blue-600 font-mono">Username: <strong>admin</strong> &nbsp; Password: <strong>admin123</strong></p>
+            <p className="text-xs text-blue-600 font-mono">Username: <strong>admin</strong> &nbsp; Password: <strong>pocso_authority_2026</strong></p>
           </div>
 
           <p className="text-center text-xs text-slate-400 mt-6">
