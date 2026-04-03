@@ -214,7 +214,7 @@ Body: { encrypted_payload, encrypted_aes_key, original_hash, evidence_type, desc
    - Flag: should_escalate = risk_score >= 0.8 OR repeat_offender
 
 3. REPORT SERVICE:
-   - Generate case_id: "CASE-2026-0042"
+   - Generate case_id: "POCSO-7F4A2X" (random + timestamp + short hash)
    - Generate case_key: secrets.token_hex(16) → 32 hex chars
    - Create DB record with all metadata
 
@@ -232,7 +232,7 @@ Body: { encrypted_payload, encrypted_aes_key, original_hash, evidence_type, desc
 
 7. RETURN:
    {
-     "case_id": "CASE-2026-0042",
+     "case_id": "POCSO-7F4A2X",
      "case_key": "a3f8c2d1e9b7f4a6c8e0d2b5a7f9c1e3",
      "blockchain_tx": "0xabc123...",
      "ipfs_cid": "QmX7k9...",
@@ -326,7 +326,7 @@ def check_duplicate_url(url):
 class ReportService:
     def create_report(self, evidence_type, risk_score, category, ipfs_cid,
                       evidence_hash, is_duplicate, repeat_count, should_escalate):
-        case_id = self._generate_case_id()    # CASE-2026-0042
+        case_id = self._generate_case_id()    # POCSO-7F4A2X
         case_key = secrets.token_hex(16)       # a3f8c2d1e9b7f4a6...
         case_key_hash = hashlib.sha256(case_key.encode()).hexdigest()
 
@@ -598,14 +598,17 @@ def update_status_on_chain(case_id, status_int, notes):
 
 ## LAYER 4: Storage
 
-### Off-Chain Evidence Storage (IPFS via Pinata)
+### The Hybrid Model (Winning Approach)
 
-| What | Where | Why |
+**Centralize for speed, decentralize for trust.** This ensures fast UX, full privacy, and tamper-proof evidence.
+
+| Layer | Technology | Purpose |
 |---|---|---|
-| Encrypted evidence files | IPFS (Pinata free tier: 1GB) | Decentralized, content-addressed |
-| Case metadata | PostgreSQL/SQLite | Fast queries, admin dashboard |
-| Status history | PostgreSQL/SQLite | Audit trail with notes |
-| Admin users | PostgreSQL/SQLite | JWT auth |
+| **Storage Layer** | IPFS (Pinata) | Stores ONLY encrypted evidence. Content-addressable. |
+| **Proof Layer** | Blockchain (Polygon) | Stores cryptographic hashes for auditability, not raw data. |
+| **Fast Access Layer** | PostgreSQL/SQLite | Stores case metadata, status, AI score for quick dashboard rendering. |
+
+*Flow:* Encrypt evidence FIRST → Store on IPFS to get CID → Store metadata in DB → Anchor hash proof on blockchain.
 
 ### IPFS Upload
 
@@ -725,9 +728,10 @@ BACKEND (FastAPI):
 
 ### Case ID
 ```
-Format: CASE-{YEAR}-{SEQUENCE}
-Example: CASE-2026-0001, CASE-2026-0042
-Generation: Atomic counter in DB, padded to 4 digits
+Format: POCSO-{RANDOM_HASH}
+Example: POCSO-7F4A2X
+Generation: Backend generation using random bytes + timestamp -> short hash. 
+Why: The Case ID is just a lookup key, not a trust layer. Centralized generation is faster and doesn't reveal the total volume of cases (unlike an atomic counter).
 ```
 
 ### Case Key (Anonymous Tracking)
@@ -928,8 +932,8 @@ RATE_LIMIT=5/minute
 | **"What if AI misclassifies something?"** | "AI is a triage tool, not a judge. It prioritizes the queue. A human authority always makes the final call before any action is taken." |
 | **"How does anonymous tracking work?"** | "Reporter gets a one-time case key (32-char hex). They use it to query status. We store only the SHA-256 hash of the key — we can't reverse it to identify anyone." |
 | **"Did you test on real illegal content?"** | "Absolutely not. We used safe proxy datasets (public NSFW datasets, hate speech datasets) and pre-scored test images. Full ethical compliance." |
-| **"Why blockchain? Isn't a database enough?"** | "A database admin can delete or alter records. Blockchain makes it mathematically impossible. Every status change is an immutable event. This prevents powerful actors from making complaints 'disappear'." |
-| **"How do you handle large video files?"** | "We don't put them on-chain. Evidence is encrypted client-side, stored on IPFS (decentralized storage), and only the cryptographic hash goes on-chain. Blockchain stores proof, storage stores content." |
+| **"Why blockchain? Isn't a database enough?"** | "A database admin can delete or alter records. Blockchain makes it mathematically impossible. We use a **hybrid model**: fast access metadata in a DB, encrypted storage on IPFS, and proof hashes on blockchain. Sensitive data is never stored in plaintext, ensuring privacy and compliance." |
+| **"How do you handle large files?"** | "We don't put them on-chain. We **centralize for speed, decentralize for trust.** Evidence is encrypted first, stored on IPFS, and only the cryptographic hash goes on-chain. The blockchain handles proof, not storage." |
 | **"How does the reporter stay anonymous if they need to be contacted?"** | "The case key creates a one-way anonymous channel. They can check back, add more evidence, or receive updates — all without revealing identity." |
 
 ---
