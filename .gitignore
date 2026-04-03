@@ -1,0 +1,35 @@
+# Dependency directories
+node_modules/
+__pycache__/
+venv/
+.venv/
+env/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Hardhat
+artifacts/
+cache/
+typechain/
+typechain-types/
+coverage/
+coverage.json
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+
+# Python
+*.pyc
+*.pyo
+build/
+dist/
+*.egg-info/
