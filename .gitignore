@@ -1,0 +1,32 @@
+# Environments
+.env
+.env.*
+!.env.example
+
+# Virtual Environments
+venv/
+env/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Database
+*.sqlite3
+*.db
+pocso.db
+
+# Keys
+keys/
+*.pem
+
+# IDEs
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
