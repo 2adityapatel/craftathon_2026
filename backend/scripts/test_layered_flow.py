@@ -7,7 +7,7 @@ import json
 import time
 import os
 
-def run_test(name: str, file_path: str = None, text_content: str = ""):
+def run_test(name: str, file_path: str | None = None, text_content: str = ""):
     base_url = "http://localhost:8000"
     print(f"\n{'='*50}\nTESTING: {name}\n{'='*50}")
     
