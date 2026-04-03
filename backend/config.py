@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     contract_address: str = ""
     system_wallet_private_key: str = ""
     
+    # Safe Browsing
+    safe_browsing_api_key: str = ""
+    
     # Admin
     admin_username: str = "admin"
     admin_password_hash: str = ""
