@@ -16,10 +16,12 @@ class Settings(BaseSettings):
     pinata_api_key: str = ""
     pinata_secret_key: str = ""
     huggingface_token: str = ""
-    
     # Polygon Blockchain
     contract_address: str = ""
     system_wallet_private_key: str = ""
+    
+    # Safe Browsing
+    safe_browsing_api_key: str = ""
     
     # Admin
     admin_username: str = "admin"
