@@ -12,6 +12,8 @@ from storage.database import SessionLocal, Case
 import hashlib
 import base64
 import json
+from routers import admin as admin_router
+
 app = FastAPI(title="POCSO Blockchain Reporting System", version="1.0.0")
 
 # CORS Setup
@@ -22,6 +24,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Admin Routes ─────────────────────────────────────────────────────────────
+app.include_router(admin_router.router)
 
 @app.get("/")
 def read_root():

@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
+from datetime import datetime
 
 class PublicAuthKeyResponse(BaseModel):
     public_key: str
@@ -42,3 +43,54 @@ class TrackCaseResponse(BaseModel):
     category: str
     last_updated: str
 
+# ── Admin schemas ─────────────────────────────────────────────────────────────
+
+class AdminLoginRequest(BaseModel):
+    username: str
+    password: str
+
+class AdminLoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    username: str
+    role: str
+
+class UpdateStatusRequest(BaseModel):
+    new_status: str   # Human-friendly string: "UNDER_REVIEW", "VERIFIED", etc.
+    notes: str = ""
+
+class CaseListItem(BaseModel):
+    case_id: str
+    status: str
+    evidence_type: str
+    risk_score: float
+    category: str
+    threat_level: str
+    is_duplicate: bool
+    should_escalate: bool
+    submitted_at: Optional[datetime] = None
+    blockchain_tx: Optional[str] = None
+
+class CaseDetail(CaseListItem):
+    confidence: float
+    repeat_count: int
+    repeat_offender: bool
+    domain: Optional[str] = None
+    ipfs_cid: str
+    evidence_hash: str
+    last_updated: Optional[datetime] = None
+
+class StatusHistoryItem(BaseModel):
+    old_status: str
+    new_status: str
+    notes: Optional[str] = None
+    updated_at: Optional[datetime] = None
+    blockchain_tx: Optional[str] = None
+
+class DashboardStats(BaseModel):
+    total_cases: int
+    by_status: dict
+    by_threat_level: dict
+    escalated_count: int
+    duplicate_count: int
+    chain_count: int   # live count from blockchain

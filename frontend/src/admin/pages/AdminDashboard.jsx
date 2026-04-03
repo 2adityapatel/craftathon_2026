@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AdminLayout from '../components/AdminLayout'
-import { getDashboardStats, getCases } from '../services/adminApi'
+import { getDashboardStats, getRecentCases } from '../services/adminApi'
 import { THREAT_BADGE, STATUS_BADGE, STATUS_LABEL, RiskBar, Spinner, timeAgo } from '../components/AdminUtils'
 
 function StatCard({ label, value, sub, color, icon }) {
@@ -29,14 +29,21 @@ export default function AdminDashboard() {
   const [stats, setStats]     = useState(null)
   const [recent, setRecent]   = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState('')
 
   useEffect(() => {
-    Promise.all([getDashboardStats(), getCases()]).then(([s, cases]) => {
-      setStats(s)
-      setRecent(cases.slice(0, 5))
-      setLoading(false)
-    })
+    Promise.all([getDashboardStats(), getRecentCases(5)])
+      .then(([s, cases]) => {
+        setStats(s)
+        setRecent(cases)
+        setLoading(false)
+      })
+      .catch(err => {
+        setError(err.message)
+        setLoading(false)
+      })
   }, [])
+
 
   if (loading) return (
     <AdminLayout title="Dashboard" breadcrumb="POCSO Authority Portal / Dashboard">

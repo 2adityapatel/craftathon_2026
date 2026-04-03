@@ -1,109 +1,288 @@
 /**
- * Admin Mock API — replace fetch calls with real backend when ready.
+ * adminApi.js — Real API integration for the Admin Panel.
+ * All data comes from the FastAPI backend which reads exclusively from blockchain.
+ *
+ * Base URL: http://localhost:8000
+ * Auth: JWT Bearer token stored in sessionStorage as admin_user.token
  */
 
-const delay = (ms = 800) => new Promise(r => setTimeout(r, ms))
+const BASE_URL = 'http://localhost:8000'
 
-// ── Mock data ────────────────────────────────────────────────────────────────
-const MOCK_CASES = [
-  { case_id: 'POCSO-7F4A2X', status: 'UNDER_REVIEW', threat_level: 'HIGH',     risk_score: 0.74, category: 'harassment',  evidence_type: 'image',      submitted_at: new Date(Date.now() - 3*3600*1000).toISOString(), domain: null,            repeat_offender: false, should_escalate: false, is_duplicate: false },
-  { case_id: 'POCSO-3C9K8M', status: 'VERIFIED',     threat_level: 'CRITICAL',  risk_score: 0.93, category: 'CSAM',        evidence_type: 'url',        submitted_at: new Date(Date.now() - 24*3600*1000).toISOString(), domain: 'harmful-site.xyz', repeat_offender: true,  should_escalate: true,  is_duplicate: false },
-  { case_id: 'POCSO-K2P9QR', status: 'RECEIVED',     threat_level: 'CRITICAL',  risk_score: 0.89, category: 'trafficking', evidence_type: 'text',       submitted_at: new Date(Date.now() - 1*3600*1000).toISOString(), domain: null,            repeat_offender: false, should_escalate: true,  is_duplicate: false },
-  { case_id: 'POCSO-MN3X5Y', status: 'RECEIVED',     threat_level: 'HIGH',      risk_score: 0.67, category: 'harassment',  evidence_type: 'screenshot', submitted_at: new Date(Date.now() - 30*60*1000).toISOString(),  domain: null,            repeat_offender: false, should_escalate: false, is_duplicate: false },
-  { case_id: 'POCSO-BW1LZ8', status: 'ESCALATED',    threat_level: 'CRITICAL',  risk_score: 0.95, category: 'CSAM',        evidence_type: 'image',      submitted_at: new Date(Date.now() - 48*3600*1000).toISOString(), domain: null,            repeat_offender: false, should_escalate: true,  is_duplicate: true  },
-  { case_id: 'POCSO-QT6HF4', status: 'ACTION_TAKEN', threat_level: 'HIGH',      risk_score: 0.71, category: 'hate_speech', evidence_type: 'url',        submitted_at: new Date(Date.now() - 72*3600*1000).toISOString(), domain: 'badsite.net',   repeat_offender: true,  should_escalate: false, is_duplicate: false },
-  { case_id: 'POCSO-VC8JD2', status: 'CLOSED',       threat_level: 'LOW',       risk_score: 0.32, category: 'other',       evidence_type: 'text',       submitted_at: new Date(Date.now() - 96*3600*1000).toISOString(), domain: null,            repeat_offender: false, should_escalate: false, is_duplicate: false },
-  { case_id: 'POCSO-RX4SP1', status: 'RECEIVED',     threat_level: 'MEDIUM',    risk_score: 0.55, category: 'harassment',  evidence_type: 'image',      submitted_at: new Date(Date.now() - 15*60*1000).toISOString(),  domain: null,            repeat_offender: false, should_escalate: false, is_duplicate: false },
-]
+// ── Auth token helper ─────────────────────────────────────────────────────────
+function getToken() {
+  try {
+    const stored = sessionStorage.getItem('admin_user')
+    if (!stored) return null
+    const parsed = JSON.parse(stored)
+    return parsed.access_token || parsed.token || null
+  } catch {
+    return null
+  }
+}
 
-const MOCK_AUDIT = [
-  { id: 1, event: 'StatusUpdated', case_id: 'POCSO-3C9K8M', old_status: 'UNDER_REVIEW', new_status: 'VERIFIED',     admin: 'admin', tx: '0xa1b2c3d4e5f6...', timestamp: new Date(Date.now() - 2*3600*1000).toISOString(),  notes: 'Confirmed as legitimate CSAM content.' },
-  { id: 2, event: 'ReportSubmitted', case_id: 'POCSO-K2P9QR', old_status: null,          new_status: 'RECEIVED',     admin: 'system', tx: '0xdeadbeef1234...', timestamp: new Date(Date.now() - 1*3600*1000).toISOString(), notes: 'New report submitted via portal.' },
-  { id: 3, event: 'StatusUpdated', case_id: 'POCSO-BW1LZ8', old_status: 'VERIFIED',     new_status: 'ESCALATED',    admin: 'admin', tx: '0xcafe9876abcd...', timestamp: new Date(Date.now() - 4*3600*1000).toISOString(),  notes: 'Escalated to CBI cybercrime unit.' },
-  { id: 4, event: 'StatusUpdated', case_id: 'POCSO-QT6HF4', old_status: 'ESCALATED',    new_status: 'ACTION_TAKEN', admin: 'admin', tx: '0xf00dface5678...', timestamp: new Date(Date.now() - 12*3600*1000).toISOString(), notes: 'ISP notified. Takedown initiated.' },
-  { id: 5, event: 'ReportSubmitted', case_id: 'POCSO-MN3X5Y', old_status: null,          new_status: 'RECEIVED',     admin: 'system', tx: '0xbabe0001abcd...', timestamp: new Date(Date.now() - 30*60*1000).toISOString(), notes: 'New report submitted via portal.' },
-]
+async function apiRequest(path, options = {}) {
+  const token = getToken()
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...options.headers,
+  }
 
-const MOCK_DOMAINS = [
-  { domain: 'harmful-site.xyz', count: 7, last_seen: new Date(Date.now() - 24*3600*1000).toISOString(), categories: ['CSAM', 'trafficking'], status: 'UNDER_REVIEW' },
-  { domain: 'badsite.net',      count: 4, last_seen: new Date(Date.now() - 72*3600*1000).toISOString(), categories: ['hate_speech'],         status: 'ACTION_TAKEN' },
-  { domain: 'abuse-forum.io',   count: 3, last_seen: new Date(Date.now() - 5*3600*1000).toISOString(),  categories: ['harassment', 'CSAM'],  status: 'RECEIVED' },
-]
+  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers })
 
-let cases = [...MOCK_CASES]
+  if (res.status === 401) {
+    // Clear stale session and force re-login
+    sessionStorage.removeItem('admin_user')
+    window.location.href = '/admin/login'
+    throw new Error('Session expired. Please log in again.')
+  }
 
-// ── Auth ─────────────────────────────────────────────────────────────────────
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail || `Server error: ${res.status}`)
+  }
+
+  return res.json()
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/v1/admin/login
+ * Returns { access_token, token_type, username, role }
+ */
 export async function adminLogin(username, password) {
-  await delay(900)
-  if (username === 'admin' && password === 'admin123') {
-    const token = 'mock_jwt_' + Date.now()
-    return { token, role: 'authority', username: 'Admin Officer', department: 'Cyber Crime Cell' }
-  }
-  throw new Error('Invalid credentials. Please check your username and password.')
-}
-
-// ── Cases ────────────────────────────────────────────────────────────────────
-export async function getCases(filters = {}) {
-  await delay(600)
-  let result = [...cases].sort((a, b) => b.risk_score - a.risk_score)
-  if (filters.priority === 'critical') result = result.filter(c => c.risk_score >= 0.8 || c.should_escalate)
-  if (filters.status) result = result.filter(c => c.status === filters.status)
-  return result
-}
-
-export async function getCaseDetail(caseId) {
-  await delay(500)
-  const c = cases.find(c => c.case_id === caseId)
-  if (!c) throw new Error('Case not found')
+  const data = await apiRequest('/api/v1/admin/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  })
+  // Normalize to what AuthContext expects: must have a "token" field for getToken()
   return {
-    ...c,
-    blockchain_tx: '0xa1b2c3d4e5f67890abcdef1234567890abcdef12',
-    ipfs_cid: 'QmX7k9NbYMpTaqCzv5R3GHnq1N2s3B4KLmParWxY8eUoF',
-    confidence: 0.87,
-    repeat_count: c.repeat_offender ? 4 : 0,
-    history: [
-      { status: 'RECEIVED',     timestamp: c.submitted_at,                                       notes: 'Report received. AI triage completed.',    admin: 'system' },
-      ...(c.status !== 'RECEIVED' ? [{ status: 'UNDER_REVIEW', timestamp: new Date(new Date(c.submitted_at).getTime() + 30*60*1000).toISOString(), notes: 'Assigned to authority for review.', admin: 'admin' }] : []),
-      ...(c.status === 'VERIFIED' || c.status === 'ESCALATED' || c.status === 'ACTION_TAKEN' || c.status === 'CLOSED'
-        ? [{ status: c.status, timestamp: new Date(new Date(c.submitted_at).getTime() + 2*3600*1000).toISOString(), notes: 'Status updated by authority.', admin: 'admin' }] : []),
-    ],
+    ...data,
+    token: data.access_token,   // alias so getToken() works
   }
 }
 
-export async function updateCaseStatus(caseId, newStatus, notes) {
-  await delay(1200)
-  const idx = cases.findIndex(c => c.case_id === caseId)
-  if (idx === -1) throw new Error('Case not found')
-  cases[idx] = { ...cases[idx], status: newStatus }
-  return {
-    case_id: caseId,
-    status: newStatus,
-    tx: '0x' + Array.from(crypto.getRandomValues(new Uint8Array(20))).map(b => b.toString(16).padStart(2,'0')).join(''),
-  }
-}
+// ── Dashboard ─────────────────────────────────────────────────────────────────
 
-// ── Stats ─────────────────────────────────────────────────────────────────────
+/**
+ * GET /api/v1/admin/dashboard/stats
+ * Returns { total_cases, by_status, by_threat_level, escalated_count, chain_count, ... }
+ * Normalized to the shape AdminDashboard.jsx expects:
+ *   { total, critical, pending, resolved, byStatus, byCategory }
+ */
 export async function getDashboardStats() {
-  await delay(500)
-  const total   = cases.length
-  const critical = cases.filter(c => c.risk_score >= 0.8).length
-  const pending  = cases.filter(c => c.status === 'RECEIVED' || c.status === 'UNDER_REVIEW').length
-  const resolved = cases.filter(c => c.status === 'ACTION_TAKEN' || c.status === 'CLOSED').length
-  const byStatus = {}
-  cases.forEach(c => { byStatus[c.status] = (byStatus[c.status] || 0) + 1 })
-  const byCategory = {}
-  cases.forEach(c => { byCategory[c.category] = (byCategory[c.category] || 0) + 1 })
-  return { total, critical, pending, resolved, byStatus, byCategory }
+  const data = await apiRequest('/api/v1/admin/dashboard/stats')
+
+  const byStatus = data.by_status || {}
+  const byThreat = data.by_threat_level || {}
+
+  return {
+    total:    data.total_cases,
+    critical: byThreat['CRITICAL'] || 0,
+    pending:  (byStatus['RECEIVED'] || 0) + (byStatus['UNDER_REVIEW'] || 0),
+    resolved: (byStatus['ACTION_TAKEN'] || 0) + (byStatus['CLOSED'] || 0),
+    byStatus,
+    byCategory: data.by_category || {},  // not returned by backend yet — safe default
+    escalated: data.escalated_count,
+    chainCount: data.chain_count,
+  }
 }
 
-// ── Domains ───────────────────────────────────────────────────────────────────
-export async function getRepeatOffenders() {
-  await delay(500)
-  return [...MOCK_DOMAINS].sort((a, b) => b.count - a.count)
+/**
+ * GET /api/v1/admin/dashboard/recent?limit=N
+ * Returns array of chain reports (newest first)
+ */
+export async function getRecentCases(limit = 10) {
+  return apiRequest(`/api/v1/admin/dashboard/recent?limit=${limit}`)
 }
 
-// ── Audit ─────────────────────────────────────────────────────────────────────
+/**
+ * GET /api/v1/admin/dashboard/risk-distribution
+ */
+export async function getRiskDistribution() {
+  return apiRequest('/api/v1/admin/dashboard/risk-distribution')
+}
+
+// ── Cases ─────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/v1/admin/cases
+ * Supports filters: status, threat_level, category, page, limit
+ * Returns { total, page, limit, cases: [...] }
+ *
+ * Also accepts legacy { priority: 'critical' } filter (used by AdminCases.jsx)
+ */
+export async function getCases(filters = {}) {
+  const params = new URLSearchParams()
+
+  if (filters.priority === 'critical') {
+    params.set('threat_level', 'CRITICAL')
+  } else {
+    if (filters.status)       params.set('status', filters.status)
+    if (filters.threat_level) params.set('threat_level', filters.threat_level)
+    if (filters.category)     params.set('category', filters.category)
+  }
+
+  if (filters.page)  params.set('page', String(filters.page))
+  if (filters.limit) params.set('limit', String(filters.limit))
+
+  const data = await apiRequest(`/api/v1/admin/cases?${params.toString()}`)
+  // Return flat array for backward-compat with pages that do cases.map(...)
+  return data.cases || data
+}
+
+/**
+ * GET /api/v1/admin/cases/{id}
+ * Returns single case detail (from blockchain getReport)
+ */
+export async function getCaseDetail(caseId) {
+  const data = await apiRequest(`/api/v1/admin/cases/${caseId}`)
+  return { ...data, history: [] }
+}
+
+/**
+ * GET /api/v1/admin/cases/{id}/history
+ * Returns array of StatusUpdated events from chain
+ */
+export async function getCaseHistory(caseId) {
+  const events = await apiRequest(`/api/v1/admin/cases/${caseId}/history`)
+  // Normalize chain events to the shape AdminCaseDetail.jsx history items expect
+  return events.map((e, i) => ({
+    status:    e.new_status,
+    timestamp: e.timestamp ? new Date(e.timestamp * 1000).toISOString() : null,
+    notes:     e.notes || '',
+    admin:     'authority',   // chain doesn't store who — could be enriched later
+    tx:        e.tx_hash,
+    block:     e.block_number,
+  }))
+}
+
+/**
+ * PATCH /api/v1/admin/cases/{id}/update-status
+ * Body: { new_status: string, notes: string }
+ * Returns { case_id, new_status, blockchain_tx, message }
+ */
+export async function updateCaseStatus(caseId, newStatus, notes) {
+  const data = await apiRequest(`/api/v1/admin/cases/${caseId}/update-status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ new_status: newStatus, notes: notes || '' }),
+  })
+  // Normalize tx field name for AdminCaseDetail success message
+  return { ...data, tx: data.blockchain_tx }
+}
+
+// ── Blockchain raw reads ──────────────────────────────────────────────────────
+
+/**
+ * GET /api/v1/admin/cases/{id}/blockchain
+ * Live chain data for a single case
+ */
+export async function getCaseBlockchain(caseId) {
+  return apiRequest(`/api/v1/admin/cases/${caseId}/blockchain`)
+}
+
+/**
+ * GET /api/v1/admin/blockchain/all
+ */
+export async function getAllBlockchainReports() {
+  return apiRequest('/api/v1/admin/blockchain/all')
+}
+
+/**
+ * GET /api/v1/admin/blockchain/count
+ */
+export async function getBlockchainCount() {
+  return apiRequest('/api/v1/admin/blockchain/count')
+}
+
+// ── Audit Log ─────────────────────────────────────────────────────────────────
+
+/**
+ * Fetches ALL on-chain reports and derives an audit-log-style list:
+ * - ReportSubmitted events (inferred from chain reports timestamp)
+ * - StatusUpdated events from each case's history
+ *
+ * This powers AdminAudit.jsx which shows an immutable blockchain event feed.
+ */
 export async function getAuditLog() {
-  await delay(600)
-  return [...MOCK_AUDIT].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+  // Get all reports for "ReportSubmitted" entries
+  const reports = await apiRequest('/api/v1/admin/blockchain/all')
+
+  const auditEntries = []
+  let idCounter = 1
+
+  for (const r of reports) {
+    // ReportSubmitted entry (derived from the stored report data)
+    auditEntries.push({
+      id:         idCounter++,
+      event:      'ReportSubmitted',
+      case_id:    r.case_id,
+      old_status: null,
+      new_status: 'RECEIVED',
+      admin:      'system',
+      tx:         r.ipfs_cid || '—',   // no single submit tx exposed by blockchain reads
+      notes:      `Category: ${r.category} | Risk: ${Math.round((r.risk_score || 0) * 100)}%`,
+      timestamp:  r.timestamp ? new Date(r.timestamp * 1000).toISOString() : null,
+    })
+  }
+
+  // Fetch history events for all cases in parallel (batch, best-effort)
+  const historyResults = await Promise.allSettled(
+    reports.map(r =>
+      apiRequest(`/api/v1/admin/cases/${r.case_id}/history`).then(evs =>
+        evs.map(e => ({
+          id:         idCounter++,
+          event:      'StatusUpdated',
+          case_id:    r.case_id,
+          old_status: null,   // contract event doesn't store old status
+          new_status: e.new_status,
+          admin:      'authority',
+          tx:         e.tx_hash,
+          notes:      e.notes || '',
+          timestamp:  e.timestamp ? new Date(e.timestamp * 1000).toISOString() : null,
+        }))
+      )
+    )
+  )
+
+  for (const result of historyResults) {
+    if (result.status === 'fulfilled') {
+      auditEntries.push(...result.value)
+    }
+  }
+
+  // Sort newest first
+  return auditEntries.sort((a, b) => {
+    if (!a.timestamp) return 1
+    if (!b.timestamp) return -1
+    return new Date(b.timestamp) - new Date(a.timestamp)
+  })
+}
+
+// ── Domains / Repeat Offenders ────────────────────────────────────────────────
+
+/**
+ * Derives domain/repeat-offender data from the blockchain report list.
+ * AdminDomains.jsx uses this.
+ */
+export async function getRepeatOffenders() {
+  const reports = await apiRequest('/api/v1/admin/blockchain/all')
+
+  const domainMap = {}
+  for (const r of reports) {
+    // Extract domain from notes or ipfs_cid field (best-effort — chain doesn't store domain natively)
+    // For now derive from category + case count per category as a proxy
+    const key = r.category || 'unknown'
+    if (!domainMap[key]) {
+      domainMap[key] = { domain: key, count: 0, last_seen: null, categories: [key], status: r.status }
+    }
+    domainMap[key].count++
+    const ts = r.timestamp ? new Date(r.timestamp * 1000).toISOString() : null
+    if (!domainMap[key].last_seen || ts > domainMap[key].last_seen) {
+      domainMap[key].last_seen = ts
+    }
+  }
+
+  return Object.values(domainMap).sort((a, b) => b.count - a.count)
 }

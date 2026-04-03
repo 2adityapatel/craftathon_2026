@@ -15,13 +15,14 @@ export default function AdminCases() {
 
   const [cases, setCases]       = useState([])
   const [loading, setLoading]   = useState(true)
-  const [filter, setFilter]     = useState({ status: '', category: '', search: '' })
+  const [filter, setFilter]     = useState({ status: '', search: '' })
   const [sortField, setSortField] = useState('risk_score')
   const [sortDir, setSortDir]   = useState('desc')
 
   useEffect(() => {
     setLoading(true)
     getCases(isPriority ? { priority: 'critical' } : {}).then(data => {
+      console.log('📦 Fetched Case Data from Blockchain:', data) // <-- Added for logging
       setCases(data)
       setLoading(false)
     })
@@ -35,7 +36,6 @@ export default function AdminCases() {
   const filtered = cases
     .filter(c => {
       if (filter.status && c.status !== filter.status) return false
-      if (filter.category && c.category !== filter.category) return false
       if (filter.search && !c.case_id.toLowerCase().includes(filter.search.toLowerCase())) return false
       return true
     })
@@ -77,17 +77,6 @@ export default function AdminCases() {
             <option key={k} value={k}>{v}</option>
           ))}
         </select>
-        <select
-          id="filter-category"
-          value={filter.category}
-          onChange={e => setFilter(f => ({ ...f, category: e.target.value }))}
-          className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
-        >
-          <option value="">All Categories</option>
-          {Object.entries(CATEGORY_LABEL).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </select>
         <div className="ml-auto text-xs text-slate-500">
           {filtered.length} of {cases.length} cases
         </div>
@@ -109,7 +98,6 @@ export default function AdminCases() {
                       Case ID <SortIcon field="case_id" />
                     </button>
                   </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Evidence</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Category</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     <button onClick={() => handleSort('status')} className="flex items-center hover:text-slate-800">
@@ -119,12 +107,6 @@ export default function AdminCases() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     <button onClick={() => handleSort('risk_score')} className="flex items-center hover:text-slate-800">
                       Risk Score <SortIcon field="risk_score" />
-                    </button>
-                  </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden md:table-cell">Flags</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden lg:table-cell">
-                    <button onClick={() => handleSort('submitted_at')} className="flex items-center hover:text-slate-800">
-                      Submitted <SortIcon field="submitted_at" />
                     </button>
                   </th>
                   <th className="px-5 py-3"></th>
@@ -145,12 +127,6 @@ export default function AdminCases() {
                       </div>
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className="flex items-center gap-1.5 text-xs text-slate-600">
-                        <span>{EVIDENCE_ICONS[c.evidence_type]}</span>
-                        <span className="capitalize">{c.evidence_type}</span>
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5">
                       <span className="text-xs text-slate-700 capitalize">{c.category?.replace('_',' ')}</span>
                     </td>
                     <td className="px-4 py-3.5">
@@ -161,26 +137,6 @@ export default function AdminCases() {
                         <span className={THREAT_BADGE[c.threat_level]}>{c.threat_level}</span>
                         <RiskBar score={c.risk_score} />
                       </div>
-                    </td>
-                    <td className="px-4 py-3.5 hidden md:table-cell">
-                      <div className="flex gap-1 flex-wrap">
-                        {c.repeat_offender && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-800 border border-purple-200">
-                            Repeat
-                          </span>
-                        )}
-                        {c.is_duplicate && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-100 text-orange-800 border border-orange-200">
-                            Duplicate
-                          </span>
-                        )}
-                        {!c.repeat_offender && !c.is_duplicate && (
-                          <span className="text-xs text-slate-400">—</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 text-xs text-slate-400 hidden lg:table-cell whitespace-nowrap">
-                      {timeAgo(c.submitted_at)}
                     </td>
                     <td className="px-5 py-3.5">
                       <Link

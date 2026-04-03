@@ -39,11 +39,36 @@ export default function AdminCaseDetail() {
   const [updateSuccess, setUpdateSuccess] = useState('')
   const [updateError, setUpdateError]     = useState('')
 
+  const [pinataData, setPinataData] = useState(null)
+  const [pinataLoading, setPinataLoading] = useState(false)
+  const [pinataError, setPinataError] = useState('')
+
   useEffect(() => {
     getCaseDetail(id)
-      .then(data => { setCaseData(data); setNewStatus(data.status); setLoading(false) })
+      .then(data => {
+        console.log('🔍 Fetched Single Case Detail:', data)
+        setCaseData(data);
+        setNewStatus(data.status);
+        setLoading(false);
+      })
       .catch(err => { setError(err.message); setLoading(false) })
   }, [id])
+
+  useEffect(() => {
+    if (!caseData?.ipfs_cid) return;
+    setPinataLoading(true);
+    fetch(`https://gateway.pinata.cloud/ipfs/${caseData.ipfs_cid}`)
+      .then(r => r.json())
+      .then(data => {
+        console.log('📦 Fetched Pinata IPFS Data:', data);
+        setPinataData(data);
+        setPinataLoading(false);
+      })
+      .catch(err => {
+        setPinataError('Failed to load data from IPFS Pinata Gateway.');
+        setPinataLoading(false);
+      });
+  }, [caseData?.ipfs_cid])
 
   const handleStatusUpdate = async (e) => {
     e.preventDefault()
@@ -124,8 +149,6 @@ export default function AdminCaseDetail() {
                   <h2 className="text-lg font-bold text-slate-900 font-mono">{c.case_id}</h2>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={STATUS_BADGE[c.status]}>{STATUS_LABEL[c.status]}</span>
-                  <span className={THREAT_BADGE[c.threat_level]}>{c.threat_level}</span>
                   {c.repeat_offender && (
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200">
                       Repeat Offender
@@ -149,13 +172,13 @@ export default function AdminCaseDetail() {
 
             {/* Details */}
             <div className="border-t border-slate-100 pt-4">
+              <InfoRow label="Status" value={<span className={STATUS_BADGE[c.status]}>{STATUS_LABEL[c.status]}</span>} />
+              <InfoRow label="Threat Level" value={<span className={THREAT_BADGE[c.threat_level]}>{c.threat_level}</span>} />
               <InfoRow label="Evidence Type" value={`${EVIDENCE_ICONS[c.evidence_type]} ${c.evidence_type?.charAt(0).toUpperCase() + c.evidence_type?.slice(1)}`} />
               <InfoRow label="Category" value={CATEGORY_LABEL[c.category] || c.category} />
               <InfoRow label="Confidence" value={`${Math.round((c.confidence || 0) * 100)}%`} />
               {c.domain && <InfoRow label="Domain" value={c.domain} mono />}
               {c.repeat_offender && <InfoRow label="Repeat Count" value={`${c.repeat_count} times`} />}
-              <InfoRow label="Submitted" value={formatDate(c.submitted_at)} />
-              <InfoRow label="Last Updated" value={formatDate(c.last_updated || c.submitted_at)} />
             </div>
           </div>
 
@@ -174,37 +197,55 @@ export default function AdminCaseDetail() {
             </div>
           </div>
 
-          {/* Status history timeline */}
-          {c.history?.length > 0 && (
-            <div className="bg-white border border-slate-200 rounded-xl p-5">
-              <h3 className="text-sm font-semibold text-slate-700 mb-5">Status History</h3>
-              <div className="space-y-0">
-                {c.history.map((h, i) => {
-                  const isLast = i === c.history.length - 1
-                  return (
-                    <div key={i} className="flex gap-4">
-                      <div className="flex flex-col items-center">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 border-2 ${
-                          isLast ? 'border-blue-600 bg-blue-50' : 'border-slate-300 bg-slate-50'
-                        }`}>
-                          {STATUS_HISTORY_ICONS[h.status] || '•'}
-                        </div>
-                        {!isLast && <div className="w-px flex-1 bg-slate-200 my-1 min-h-[20px]" />}
-                      </div>
-                      <div className={`${isLast ? '' : 'pb-5'} flex-1`}>
-                        <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                          <span className={STATUS_BADGE[h.status]}>{STATUS_LABEL[h.status]}</span>
-                          <span className="text-xs text-slate-400">{formatDate(h.timestamp)}</span>
-                          <span className="text-xs text-slate-400">by {h.admin}</span>
-                        </div>
-                        {h.notes && <p className="text-xs text-slate-600">{h.notes}</p>}
-                      </div>
+          {/* Pinata IPFS Evidence Viewer */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 className="text-sm font-semibold text-slate-700 mb-5 flex items-center gap-2">
+              <span>🗂️</span> Raw Evidence (Pinned on IPFS via Pinata)
+            </h3>
+            
+            {pinataLoading ? (
+              <div className="flex justify-center py-6"><Spinner size="sm" /></div>
+            ) : pinataError ? (
+              <p className="text-xs text-red-500 py-4 text-center">{pinataError}</p>
+            ) : pinataData ? (
+              <div className="space-y-4">
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Reporter's Description</p>
+                  <p className="text-sm text-slate-800 whitespace-pre-wrap">{pinataData.description || 'No description provided.'}</p>
+                </div>
+                
+                {pinataData.url && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Reported URL</p>
+                    <a href={pinataData.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-700 hover:underline break-all">
+                      {pinataData.url}
+                    </a>
+                  </div>
+                )}
+
+                {pinataData.image_cid && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center justify-between">
+                      <span>Attached Image Evidence</span>
+                      <a href={`https://gateway.pinata.cloud/ipfs/${pinataData.image_cid}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline normal-case flex items-center gap-1">
+                        View IPFS Source
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                      </a>
+                    </p>
+                    <div className="rounded-lg border border-slate-200 overflow-hidden bg-slate-200 flex justify-center max-h-96">
+                      <img 
+                        src={`https://gateway.pinata.cloud/ipfs/${pinataData.image_cid}`} 
+                        alt="Evidence" 
+                        className="object-contain max-w-full h-auto"
+                      />
                     </div>
-                  )
-                })}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            ) : (
+              <p className="text-xs text-slate-500 py-4 text-center">No IPFS data mapped.</p>
+            )}
+          </div>
         </div>
 
         {/* ── Right: Status update panel ── */}
