@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import Layout from '../components/Layout'
 import { submitReport } from '../services/api'
+import { encryptReport } from '../utils/crypto'
 
 // ── Step indicator ───────────────────────────────────────────────────────────
 function StepIndicator({ current, total, labels }) {
@@ -421,7 +422,12 @@ export default function ReportPage() {
     setSubmitting(true)
     setError('')
     try {
-      const result = await submitReport(formData)
+      // Step 1: Encrypt the evidence in-browser (Layer 1 Privacy)
+      const encryptedData = await encryptReport(formData)
+      
+      // Step 2: Submit to backend
+      const result = await submitReport(encryptedData)
+      
       // Save to localStorage for tracking
       localStorage.setItem(`case_${result.case_id}`, JSON.stringify({
         ...result,
@@ -432,7 +438,8 @@ export default function ReportPage() {
       localStorage.setItem('last_case_key', result.case_key)
       navigate('/success', { state: result })
     } catch (err) {
-      setError('Submission failed. Please try again.')
+      console.error('Submission Error:', err)
+      setError(err.message || 'Submission failed. Please try again.')
       setSubmitting(false)
     }
   }

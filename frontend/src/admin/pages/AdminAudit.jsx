@@ -86,8 +86,8 @@ export default function AdminAudit() {
                 {filtered.map((entry, idx) => {
                   const evCfg = EVENT_CONFIG[entry.event] || { icon: '•', color: 'bg-slate-100 text-slate-600 border-slate-200', label: entry.event }
                   return (
-                    <tr key={entry.id} className={`hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/30' : ''}`}>
-                      <td className="px-5 py-3.5 text-xs text-slate-400 font-mono">{String(entry.id).padStart(4, '0')}</td>
+                    <tr key={entry.tx} className={`hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/30' : ''}`}>
+                      <td className="px-5 py-3.5 text-xs text-slate-400 font-mono">{String(idx + 1).padStart(4, '0')}</td>
 
                       <td className="px-4 py-3.5">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border ${evCfg.color}`}>
