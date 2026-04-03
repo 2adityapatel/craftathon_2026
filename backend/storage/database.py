@@ -33,6 +33,14 @@ class Case(Base):
     submitted_at = Column(DateTime, default=datetime.utcnow)
     last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    @property
+    def threat_level(self) -> str:
+        score = self.risk_score or 0.0
+        if score >= 0.9: return "CRITICAL"
+        if score >= 0.7: return "HIGH"
+        if score >= 0.4: return "MEDIUM"
+        return "LOW"
+
 class StatusHistory(Base):
     __tablename__ = "status_history"
 

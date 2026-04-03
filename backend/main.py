@@ -1,10 +1,12 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional, List
 from config import settings
 from crypto.keys import get_public_key_pem
 from models.schemas import (
     PublicAuthKeyResponse, SubmitReportRequest, SubmitReportResponse, 
-    TrackCaseResponse, AdminLoginRequest, TokenResponse
+    TrackCaseResponse, AdminLoginRequest, TokenResponse,
+    AdminCaseResponse, DomainStatResponse
 )
 from services.privacy_service import PrivacyService
 from services.ai_analysis_service import AIAnalysisService
@@ -158,7 +160,7 @@ async def login_admin(request: Request, payload: AdminLoginRequest):
 
 # ── Administrative Endpoints (Protected) ──
 
-@app.get("/api/v1/admin/cases")
+@app.get("/api/v1/admin/cases", response_model=List[AdminCaseResponse])
 async def get_all_cases(priority: Optional[str] = None, current_user: str = Depends(get_current_admin)):
     """
     List all cases from the database.
@@ -204,7 +206,7 @@ async def get_audit_log(current_user: str = Depends(get_current_admin)):
     reader = BlockchainReader()
     return reader.get_audit_events()
 
-@app.get("/api/v1/admin/domains")
+@app.get("/api/v1/admin/domains", response_model=List[DomainStatResponse])
 async def get_repeated_domains(current_user: str = Depends(get_current_admin)):
     """
     Returns domains ordered by frequency to identify repeat offenders.
@@ -212,6 +214,7 @@ async def get_repeated_domains(current_user: str = Depends(get_current_admin)):
     db = SessionLocal()
     try:
         from sqlalchemy import func
+        # 1. First get the domain counts and metadata
         results = db.query(
             Case.domain, 
             func.count(Case.case_id).label("count"),
@@ -219,9 +222,20 @@ async def get_repeated_domains(current_user: str = Depends(get_current_admin)):
             Case.status
         ).filter(Case.domain != None).group_by(Case.domain).all()
         
-        return [
-            {"domain": r.domain, "count": r.count, "last_seen": str(r.last_seen), "status": r.status}
-            for r in results
-        ]
+        # 2. For each domain, fetch unique categories
+        domain_stats = []
+        for r in results:
+            categories = db.query(Case.category).filter(Case.domain == r.domain).distinct().all()
+            category_list = [c[0] for c in categories if c[0]]
+            
+            domain_stats.append({
+                "domain": r.domain, 
+                "count": r.count, 
+                "last_seen": r.last_seen, 
+                "status": r.status,
+                "categories": category_list
+            })
+            
+        return sorted(domain_stats, key=lambda x: x["count"], reverse=True)
     finally:
         db.close()

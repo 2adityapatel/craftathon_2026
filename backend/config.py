@@ -20,7 +20,8 @@ class Settings(BaseSettings):
     # Polygon Blockchain
     contract_address: str = ""
     system_wallet_private_key: str = ""
-    
+    sepolia_rpc_url: str = ""
+
     # Admin
     admin_username: str = "admin"
     admin_password_hash: str = ""
@@ -30,8 +31,12 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 600 # 10 hours for hackathon
 
+    # Rate Limiting
+    rate_limit: str = "5/minute"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 settings = Settings()
