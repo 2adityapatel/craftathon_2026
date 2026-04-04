@@ -34,7 +34,9 @@ export function LanguageProvider({ children }) {
           fallback = undefined;
       }
     }
-    return current || fallback || key;
+    if (current !== undefined) return current;
+    if (fallback !== undefined) return fallback;
+    return key;
   };
 
   return (
