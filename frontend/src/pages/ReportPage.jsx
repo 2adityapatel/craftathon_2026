@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import Layout from '../components/Layout'
 import { submitReportPlain } from '../services/api'
+import { useLanguage } from '../context/LanguageContext'
 
 // ── Helper: file → base64 ─────────────────────────────────────────────────────
 function fileToBase64(file) {
@@ -71,6 +72,7 @@ function SubmittingOverlay() {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function ReportPage() {
+  const { t } = useLanguage()
   const navigate = useNavigate()
   const fileRef = useRef()
   const [submitting, setSubmitting] = useState(false)
@@ -166,9 +168,9 @@ export default function ReportPage() {
               <span className="text-xs text-slate-300">Secure · Anonymous · Blockchain-Anchored</span>
             </div>
             <h1 className="text-3xl font-black font-display mb-2">
-              Submit a <span className="text-gradient-amber">Report</span>
+              {t('reportContext.pageTitle')}
             </h1>
-            <p className="text-slate-400 text-sm">Your identity is never collected or stored.</p>
+            <p className="text-slate-400 text-sm">{t('reportContext.privacyDisclaimer')}</p>
           </motion.div>
 
           {/* Card */}
@@ -192,12 +194,12 @@ export default function ReportPage() {
                   {/* Description */}
                   <div>
                     <label htmlFor="description-input" className="block text-sm font-medium text-slate-300 mb-2">
-                      Description <span className="text-slate-500">(optional)</span>
+                      {t('reportContext.descTitle')}
                     </label>
                     <textarea
                       id="description-input"
                       className="textarea-field min-h-[120px] text-sm"
-                      placeholder="Describe what you observed, when it happened, and any other relevant context..."
+                      placeholder={t('reportContext.descPlaceholder')}
                       value={form.description}
                       onChange={(e) => updateField('description', e.target.value)}
                       rows={4}
@@ -207,13 +209,13 @@ export default function ReportPage() {
                   {/* URL */}
                   <div>
                     <label htmlFor="url-input" className="block text-sm font-medium text-slate-300 mb-2">
-                      Target URL <span className="text-slate-500">(optional)</span>
+                      {t('reportContext.urlTitle')}
                     </label>
                     <input
                       id="url-input"
                       type="url"
                       className="input-field text-sm"
-                      placeholder="https://example.com/harmful-content"
+                      placeholder={t('reportContext.urlPlaceholder')}
                       value={form.url}
                       onChange={(e) => updateField('url', e.target.value)}
                     />
@@ -225,7 +227,7 @@ export default function ReportPage() {
                   {/* Image Upload */}
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Evidence Image / Screenshot <span className="text-slate-500">(optional)</span>
+                      {t('reportContext.fileTitle')}
                     </label>
 
                     {!form.file ? (
@@ -242,8 +244,8 @@ export default function ReportPage() {
                         }`}
                       >
                         <div className="text-4xl mb-3">🖼️</div>
-                        <p className="text-slate-300 font-medium text-sm mb-1">Drop image here, or click to browse</p>
-                        <p className="text-xs text-slate-600">PNG, JPG, WEBP, GIF supported</p>
+                        <p className="text-slate-300 font-medium text-sm mb-1">{t('reportContext.fileLabel')}</p>
+                        <p className="text-xs text-slate-600">{t('reportContext.fileMimes')}</p>
                         <input
                           ref={fileRef}
                           type="file"
@@ -267,7 +269,7 @@ export default function ReportPage() {
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-slate-200 truncate text-sm">{form.fileName}</p>
-                          <p className="text-xs text-slate-500 mt-0.5">Ready to upload</p>
+                          <p className="text-xs text-slate-500 mt-0.5">{t('reportContext.selected')}</p>
                         </div>
                         <button
                           type="button"
@@ -323,7 +325,7 @@ export default function ReportPage() {
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.25C17.25 22.15 21 17.25 21 12V7L12 2z"/>
                     </svg>
-                    Submit Report
+                    {submitting ? t('reportContext.submitting') : t('reportContext.submitBtn')}
                   </button>
                 </div>
               </form>
