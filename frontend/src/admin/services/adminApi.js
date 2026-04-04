@@ -6,7 +6,7 @@
  * Auth: JWT Bearer token stored in sessionStorage as admin_user.token
  */
 
-const BASE_URL = 'http://localhost:8000'
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
 // ── Auth token helper ─────────────────────────────────────────────────────────
 function getToken() {
