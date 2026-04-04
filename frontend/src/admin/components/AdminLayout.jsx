@@ -59,10 +59,17 @@ const NAV = [
 
 function SidebarLink({ item }) {
   const location = useLocation()
-  // For exact routes, check full match; for others, check pathname start
-  const isActive = item.exact
-    ? location.pathname === item.to
-    : location.pathname.startsWith(item.to.split('?')[0]) && item.to !== '/admin'
+  let isActive = false;
+  if (item.exact) {
+    isActive = location.pathname === item.to;
+  } else if (location.pathname.startsWith(item.to.split('?')[0]) && item.to !== '/admin') {
+    const itemSearch = item.to.split('?')[1];
+    if (itemSearch) {
+      isActive = location.search.includes(itemSearch);
+    } else {
+      isActive = !location.search.includes('priority=critical');
+    }
+  }
 
   return (
     <NavLink
@@ -112,7 +119,7 @@ export default function AdminLayout({ children, title, breadcrumb }) {
             </svg>
           </div>
           <div>
-            <p className="text-sm font-bold text-white leading-tight">POCSO System</p>
+            <p className="text-sm font-bold text-white leading-tight">Awaaz System</p>
             <p className="text-xs text-slate-400 leading-tight">Authority Portal</p>
           </div>
         </div>

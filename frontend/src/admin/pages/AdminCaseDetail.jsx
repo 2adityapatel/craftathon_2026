@@ -89,13 +89,13 @@ export default function AdminCaseDetail() {
   }
 
   if (loading) return (
-    <AdminLayout title="Case Detail" breadcrumb="POCSO Authority Portal / Case Queue / Loading...">
+    <AdminLayout title="Case Detail" breadcrumb="Awaaz Authority Portal / Case Queue / Loading...">
       <div className="flex justify-center py-24"><Spinner size="lg" /></div>
     </AdminLayout>
   )
 
   if (error) return (
-    <AdminLayout title="Case Not Found" breadcrumb="POCSO Authority Portal / Case Queue">
+    <AdminLayout title="Case Not Found" breadcrumb="Awaaz Authority Portal / Case Queue">
       <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center">
         <p className="text-red-700 font-semibold mb-2">Error loading case</p>
         <p className="text-sm text-red-600 mb-4">{error}</p>
@@ -109,7 +109,7 @@ export default function AdminCaseDetail() {
   return (
     <AdminLayout
       title={`Case: ${c.case_id}`}
-      breadcrumb={`POCSO Authority Portal / Case Queue / ${c.case_id}`}
+      breadcrumb={`Awaaz Authority Portal / Case Queue / ${c.case_id}`}
     >
       {/* Back */}
       <div className="mb-4">

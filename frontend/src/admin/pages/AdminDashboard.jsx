@@ -46,7 +46,7 @@ export default function AdminDashboard() {
 
 
   if (loading) return (
-    <AdminLayout title="Dashboard" breadcrumb="POCSO Authority Portal / Dashboard">
+    <AdminLayout title="Dashboard" breadcrumb="Awaaz Authority Portal / Dashboard">
       <div className="flex items-center justify-center h-64"><Spinner size="lg" /></div>
     </AdminLayout>
   )
@@ -55,7 +55,7 @@ export default function AdminDashboard() {
   const maxCat = categoryData[0]?.[1] || 1
 
   return (
-    <AdminLayout title="Dashboard Overview" breadcrumb="POCSO Authority Portal / Dashboard">
+    <AdminLayout title="Dashboard Overview" breadcrumb="Awaaz Authority Portal / Dashboard">
       {/* Alert banner for critical pending */}
       {stats.critical > 0 && (
         <div className="mb-5 flex items-start gap-3 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
