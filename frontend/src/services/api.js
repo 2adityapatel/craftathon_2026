@@ -3,7 +3,7 @@
  * Mock functions are kept for the track endpoint until backend is wired up.
  */
 
-const BASE_URL = 'http://localhost:8000'
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 const delay = (ms = 1200) => new Promise(res => setTimeout(res, ms))
 
 async function encryptPayload(data) {
