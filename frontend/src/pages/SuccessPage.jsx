@@ -2,6 +2,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Layout from '../components/Layout'
+import { useLanguage } from '../context/LanguageContext'
 
 function CopyButton({ text, label }) {
   const [copied, setCopied] = useState(false)
@@ -51,6 +52,7 @@ const threatColors = {
 }
 
 export default function SuccessPage() {
+  const { t } = useLanguage()
   const { state } = useLocation()
   const navigate = useNavigate()
 
@@ -92,7 +94,7 @@ export default function SuccessPage() {
 
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
               <h1 className="text-3xl font-black font-display mb-2">
-                Report <span className="text-gradient-amber">Submitted</span>
+                {t('successContext.title1')} <span className="text-gradient-amber">{t('successContext.title2')}</span>
               </h1>
               <p className="text-slate-400 text-sm max-w-md mx-auto">{message}</p>
             </motion.div>
@@ -112,8 +114,8 @@ export default function SuccessPage() {
                   d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/>
               </svg>
               <div>
-                <p className="text-sm font-semibold text-amber-400 mb-0.5">Save these details now!</p>
-                <p className="text-xs text-slate-400">This is the only time your Case Key is shown. We do not store it. Without it, you cannot track your case.</p>
+                <p className="text-sm font-semibold text-amber-400 mb-0.5">{t('successContext.saveWarning')}</p>
+                <p className="text-xs text-slate-400">{t('successContext.saveDesc')}</p>
               </div>
             </div>
 
@@ -130,7 +132,7 @@ export default function SuccessPage() {
 
             {/* Case Key */}
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Case Key (Secret)</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{t('successContext.caseKey')}</label>
               <div className="flex items-center gap-3">
                 <div className="flex-1 bg-navy-900 border border-red-500/20 rounded-xl px-4 py-3 font-mono text-slate-300 text-xs break-all">
                   {case_key}
@@ -138,7 +140,7 @@ export default function SuccessPage() {
                 <CopyButton text={case_key} label="Key" />
               </div>
               <p className="text-xs text-slate-600 mt-2">
-                ✅ Also auto-saved to your browser. Clear if on a shared device.
+                {t('successContext.autoSaved')}
               </p>
             </div>
 
@@ -223,7 +225,7 @@ export default function SuccessPage() {
             transition={{ delay: 0.6 }}
             className="text-center text-xs text-slate-600 mt-4"
           >
-            Thank you for helping protect children. Your report is in safe hands.
+            {t('successContext.thanks')}
           </motion.p>
         </div>
       </div>

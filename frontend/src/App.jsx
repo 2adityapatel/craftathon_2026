@@ -16,9 +16,12 @@ import AdminCaseDetail      from './admin/pages/AdminCaseDetail'
 import AdminDomains         from './admin/pages/AdminDomains'
 import AdminAudit           from './admin/pages/AdminAudit'
 
+import { LanguageProvider } from './context/LanguageContext'
+
 export default function App() {
   return (
     <BrowserRouter>
+      <LanguageProvider>
       <AuthProvider>
         <Routes>
           {/* ── Reporter Portal ── */}
@@ -50,6 +53,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
+      </LanguageProvider>
     </BrowserRouter>
   )
 }

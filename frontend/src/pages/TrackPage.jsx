@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Layout from '../components/Layout'
 import { trackCase } from '../services/api'
+import { useLanguage } from '../context/LanguageContext'
 
 const STATUS_CONFIG = {
   RECEIVED:     { label: 'Received',     color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20', icon: '📥', desc: 'Your report has been received and queued for AI triage.' },
@@ -54,6 +55,7 @@ function StatusTimeline({ history }) {
 }
 
 export default function TrackPage() {
+  const { t } = useLanguage()
   const savedKey = localStorage.getItem('last_case_key') || ''
 
   const [caseId, setCaseId] = useState('')
@@ -128,10 +130,10 @@ export default function TrackPage() {
               <span className="text-xs text-slate-400">Anonymous Case Tracking</span>
             </div>
             <h1 className="text-3xl font-black font-display mb-2">
-              Track Your <span className="text-gradient-amber">Case</span>
+              {t('trackContext.title')}
             </h1>
             <p className="text-slate-400 text-sm max-w-md mx-auto">
-              Enter your Case ID and Case Key to check the status of your report — completely anonymously.
+              {t('trackContext.subtitle')}
             </p>
           </motion.div>
 
@@ -145,7 +147,7 @@ export default function TrackPage() {
             <form onSubmit={handleTrack} className="space-y-4">
               <div>
                 <label htmlFor="case-id-input" className="block text-sm font-medium text-slate-300 mb-2">
-                  Case ID
+                  {t('trackContext.caseIdLabel')}
                 </label>
                 <input
                   id="case-id-input"
@@ -160,14 +162,14 @@ export default function TrackPage() {
 
               <div>
                 <label htmlFor="case-key-input" className="block text-sm font-medium text-slate-300 mb-2">
-                  Case Key <span className="text-slate-600 font-normal">(32-char secret)</span>
+                  {t('trackContext.caseKeyLabel')}
                 </label>
                 <input
                   id="case-key-input"
                   type="text"
                   className="input-field font-mono text-sm"
                   readOnly
-                  placeholder="Auto-filled from local storage..."
+                  placeholder={t('trackContext.caseKeyPlaceholder')}
                   value={caseKey}
                   onChange={(e) => { setCaseKey(e.target.value); setError('') }}
                 />
@@ -210,7 +212,7 @@ export default function TrackPage() {
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
-                    Track Case
+                    {t('trackContext.btnTrack')}
                   </>
                 )}
               </button>
