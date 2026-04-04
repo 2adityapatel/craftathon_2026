@@ -17,7 +17,7 @@ import AdminDomains         from './admin/pages/AdminDomains'
 import AdminAudit           from './admin/pages/AdminAudit'
 
 // Global components
-import POCSOChatbot         from './components/POCSOChatbot'
+import AwaazChatbot         from './components/AwaazChatbot'
 
 import { LanguageProvider } from './context/LanguageContext'
 
@@ -57,7 +57,7 @@ export default function App() {
         </Routes>
 
         {/* AI Chatbot — floating widget on all pages */}
-        <POCSOChatbot />
+        <AwaazChatbot />
       </AuthProvider>
       </LanguageProvider>
     </BrowserRouter>
