@@ -36,12 +36,21 @@ class SubmitReportResponse(BaseModel):
     category: str
     message: str
 
+class HistoryItem(BaseModel):
+    status: str
+    timestamp: str
+    notes: Optional[str] = None
+
 class TrackCaseResponse(BaseModel):
     case_id: str
     status: str
     evidence_type: str
     category: str
     last_updated: str
+    threat_level: str
+    blockchain_tx: Optional[str] = None
+    ipfs_cid: Optional[str] = None
+    history: List[HistoryItem]
 
 # ── Admin schemas ─────────────────────────────────────────────────────────────
 

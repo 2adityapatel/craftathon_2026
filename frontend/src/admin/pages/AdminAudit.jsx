@@ -119,7 +119,17 @@ export default function AdminAudit() {
 
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs text-teal-700 truncate max-w-[120px]">{entry.tx}</span>
+                          {(!entry.tx || entry.tx === "pending" || entry.tx.startsWith("chain_error") || entry.tx === "—") ? (
+                            <span className="font-mono text-xs text-slate-500">{entry.tx || "—"}</span>
+                          ) : (
+                            <div className="flex flex-col gap-1">
+                              <span className="font-mono text-xs text-teal-700 truncate max-w-[120px]">{entry.tx}</span>
+                              <a href={`https://sepolia.etherscan.io/tx/${entry.tx}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-sans text-[10px] font-bold text-blue-600 hover:text-blue-800 transition-colors uppercase tracking-tight mt-0.5">
+                                View in Explorer
+                                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                              </a>
+                            </div>
+                          )}
                           <button
                             id={`copy-tx-${entry.id}`}
                             onClick={() => copyTx(entry.tx, entry.id)}

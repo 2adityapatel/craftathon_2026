@@ -138,7 +138,14 @@ export async function getCases(filters = {}) {
  */
 export async function getCaseDetail(caseId) {
   const data = await apiRequest(`/api/v1/admin/cases/${caseId}`)
-  return { ...data, history: [] }
+  // Fetch status history separately and attach
+  let history = []
+  try {
+    history = await getCaseHistory(caseId)
+  } catch {
+    // History is best-effort — don't break the case detail page
+  }
+  return { ...data, history }
 }
 
 /**
@@ -206,14 +213,15 @@ export async function getBlockchainCount() {
  * This powers AdminAudit.jsx which shows an immutable blockchain event feed.
  */
 export async function getAuditLog() {
-  // Get all reports for "ReportSubmitted" entries
-  const reports = await apiRequest('/api/v1/admin/blockchain/all')
+  // Get all reports from the DB for "ReportSubmitted" entries
+  const response = await apiRequest('/api/v1/admin/cases?limit=1000')
+  const reports = response.cases || response
 
   const auditEntries = []
   let idCounter = 1
 
   for (const r of reports) {
-    // ReportSubmitted entry (derived from the stored report data)
+    // ReportSubmitted entry
     auditEntries.push({
       id:         idCounter++,
       event:      'ReportSubmitted',
@@ -221,13 +229,13 @@ export async function getAuditLog() {
       old_status: null,
       new_status: 'RECEIVED',
       admin:      'system',
-      tx:         r.ipfs_cid || '—',   // no single submit tx exposed by blockchain reads
+      tx:         r.blockchain_tx || '—',
       notes:      `Category: ${r.category} | Risk: ${Math.round((r.risk_score || 0) * 100)}%`,
-      timestamp:  r.timestamp ? new Date(r.timestamp * 1000).toISOString() : null,
+      timestamp:  r.submitted_at ? new Date(r.submitted_at).toISOString() : new Date().toISOString(),
     })
   }
 
-  // Fetch history events for all cases in parallel (batch, best-effort)
+  // Fetch history events for all cases
   const historyResults = await Promise.allSettled(
     reports.map(r =>
       apiRequest(`/api/v1/admin/cases/${r.case_id}/history`).then(evs =>
@@ -235,12 +243,12 @@ export async function getAuditLog() {
           id:         idCounter++,
           event:      'StatusUpdated',
           case_id:    r.case_id,
-          old_status: null,   // contract event doesn't store old status
+          old_status: e.old_status,
           new_status: e.new_status,
           admin:      'authority',
           tx:         e.tx_hash,
           notes:      e.notes || '',
-          timestamp:  e.timestamp ? new Date(e.timestamp * 1000).toISOString() : null,
+          timestamp:  e.timestamp ? new Date(e.timestamp).toISOString() : new Date().toISOString(),
         }))
       )
     )

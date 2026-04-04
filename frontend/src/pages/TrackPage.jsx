@@ -62,6 +62,23 @@ export default function TrackPage() {
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
 
+  const handleCaseIdChange = (e) => {
+    const val = e.target.value.toUpperCase()
+    setCaseId(val)
+    setError('')
+    
+    // Auto-fill case key from local storage if available for this specific case!
+    const storedStr = localStorage.getItem(`case_${val}`)
+    if (storedStr) {
+      try {
+        const stored = JSON.parse(storedStr)
+        if (stored.case_key) {
+          setCaseKey(stored.case_key)
+        }
+      } catch(err) {}
+    }
+  }
+
   const handleTrack = async (e) => {
     e.preventDefault()
     if (!caseId.trim() || !caseKey.trim()) {
@@ -83,6 +100,14 @@ export default function TrackPage() {
 
   const currentStatusIndex = result ? STATUS_ORDER.indexOf(result.status) : -1
   const currentCfg = result ? (STATUS_CONFIG[result.status] || {}) : {}
+
+  let progressWidth = '0%'
+  if (result) {
+    if (result.status === 'RECEIVED') progressWidth = '25%'
+    else if (result.status === 'UNDER_REVIEW') progressWidth = '50%'
+    else if (result.status === 'VERIFIED') progressWidth = '75%'
+    else progressWidth = '100%' // ESCALATED, ACTION_TAKEN, CLOSED
+  }
 
   return (
     <Layout>
@@ -128,8 +153,8 @@ export default function TrackPage() {
                   className="input-field font-mono tracking-widest uppercase"
                   placeholder="POCSO-7F4A2X"
                   value={caseId}
-                  onChange={(e) => { setCaseId(e.target.value); setError('') }}
-                  maxLength={12}
+                  onChange={handleCaseIdChange}
+                  maxLength={20}
                 />
               </div>
 
@@ -141,7 +166,8 @@ export default function TrackPage() {
                   id="case-key-input"
                   type="text"
                   className="input-field font-mono text-sm"
-                  placeholder="a3f8c2d1e9b7f4a6c8e0d2b5a7f9c1e3"
+                  readOnly
+                  placeholder="Auto-filled from local storage..."
                   value={caseKey}
                   onChange={(e) => { setCaseKey(e.target.value); setError('') }}
                 />
@@ -191,31 +217,6 @@ export default function TrackPage() {
             </form>
           </motion.div>
 
-          {/* Demo hint */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="card p-4 mb-6 border-navy-600/50"
-          >
-            <p className="text-xs text-slate-500 font-semibold mb-2">🧪 Demo: Try these sample cases</p>
-            <div className="space-y-1.5">
-              {[
-                { id: 'POCSO-7F4A2X', key: 'demo', status: 'UNDER_REVIEW' },
-                { id: 'POCSO-3C9K8M', key: 'demo', status: 'VERIFIED' },
-              ].map((demo) => (
-                <button
-                  key={demo.id}
-                  onClick={() => { setCaseId(demo.id); setCaseKey(demo.key) }}
-                  className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-navy-700 transition-colors group"
-                >
-                  <span className="font-mono text-xs text-amber-400">{demo.id}</span>
-                  <span className="text-xs text-slate-600">→ {demo.status}</span>
-                </button>
-              ))}
-            </div>
-          </motion.div>
-
           {/* Results */}
           <AnimatePresence>
             {result && (
@@ -260,7 +261,7 @@ export default function TrackPage() {
                     <div className="h-2 rounded-full bg-navy-700 overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
-                        animate={{ width: `${((currentStatusIndex + 1) / STATUS_ORDER.length) * 100}%` }}
+                        animate={{ width: progressWidth }}
                         transition={{ duration: 0.8, delay: 0.2 }}
                         className="h-full rounded-full bg-gradient-to-r from-amber-600 to-amber-400"
                       />
@@ -294,7 +295,17 @@ export default function TrackPage() {
                     <div className="space-y-3">
                       <div className="flex items-start gap-3">
                         <span className="text-xs text-slate-600 w-16 flex-shrink-0 mt-0.5">Tx Hash</span>
-                        <span className="font-mono text-xs text-teal-400 break-all">{result.blockchain_tx}</span>
+                        {(!result.blockchain_tx || result.blockchain_tx === "pending" || result.blockchain_tx.startsWith("chain_error")) ? (
+                          <span className="font-mono text-xs text-teal-400 break-all">{result.blockchain_tx || "—"}</span>
+                        ) : (
+                          <div className="flex flex-col gap-1.5 items-start">
+                            <span className="font-mono text-xs text-teal-400 break-all">{result.blockchain_tx}</span>
+                            <a href={`https://sepolia.etherscan.io/tx/${result.blockchain_tx}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-500/10 text-teal-400 border border-teal-500/20 hover:bg-teal-500/20 hover:text-teal-300 transition-colors font-medium text-xs font-sans">
+                              View in Explorer
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                            </a>
+                          </div>
+                        )}
                       </div>
                       {result.ipfs_cid && (
                         <div className="flex items-start gap-3">

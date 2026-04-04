@@ -72,6 +72,27 @@ def _verify_token(credentials: HTTPAuthorizationCredentials = Depends(_bearer)) 
         raise HTTPException(status_code=401, detail="Invalid token.")
 
 
+def _case_to_dict(c: Case) -> dict:
+    return dict(
+        case_id=c.case_id,
+        status=c.status,
+        evidence_type=c.evidence_type,
+        risk_score=c.risk_score,
+        category=c.category,
+        confidence=c.confidence,
+        is_duplicate=c.is_duplicate,
+        repeat_offender=c.repeat_offender,
+        repeat_count=c.repeat_count,
+        should_escalate=c.should_escalate,
+        domain=c.domain,
+        ipfs_cid=c.ipfs_cid,
+        evidence_hash=c.evidence_hash,
+        blockchain_tx=c.blockchain_tx,
+        submitted_at=c.submitted_at.isoformat() if c.submitted_at else None,
+        last_updated=c.last_updated.isoformat() if c.last_updated else None,
+        threat_level=compute_threat_level(c.risk_score or 0.0),
+    )
+
 def _enrich_report(r: dict) -> dict:
     """Add computed fields (threat_level) to a raw chain report dict."""
     r["threat_level"] = compute_threat_level(r.get("risk_score", 0.0))
@@ -107,37 +128,35 @@ def admin_login(body: AdminLoginRequest):
 @router.get("/dashboard/stats", response_model=DashboardStats, summary="Dashboard Statistics (from blockchain)")
 def dashboard_stats(_token: dict = Depends(_verify_token)):
     """
-    Fetches ALL reports from POCSORegistry.getAllReports() and computes stats.
-    Source: 100% blockchain.
+    Fetches ALL reports from DB and computes stats.
+    Source: Local DB.
     """
+    db = SessionLocal()
     try:
-        reports = get_all_reports_from_chain()
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Blockchain unavailable: {str(e)}")
-
-    total = len(reports)
-    by_status: dict[str, int] = {}
-    by_threat: dict[str, int] = {"LOW": 0, "MEDIUM": 0, "HIGH": 0, "CRITICAL": 0}
-
-    for r in reports:
-        # Status counts
-        s = r.get("status", "UNKNOWN")
-        by_status[s] = by_status.get(s, 0) + 1
-
-        # Threat level counts
-        tl = compute_threat_level(r.get("risk_score", 0.0))
-        by_threat[tl] = by_threat.get(tl, 0) + 1
-
-    escalated = by_status.get("ESCALATED", 0)
-
-    return DashboardStats(
-        total_cases=total,
-        by_status=by_status,
-        by_threat_level=by_threat,
-        escalated_count=escalated,
-        duplicate_count=0,   # not tracked on-chain
-        chain_count=total,
-    )
+        cases = db.query(Case).all()
+        by_status: dict[str, int] = {}
+        by_threat: dict[str, int] = {"LOW": 0, "MEDIUM": 0, "HIGH": 0, "CRITICAL": 0}
+        
+        for case in cases:
+            s = case.status or "UNKNOWN"
+            by_status[s] = by_status.get(s, 0) + 1
+            
+            tl = compute_threat_level(case.risk_score or 0.0)
+            by_threat[tl] = by_threat.get(tl, 0) + 1
+            
+        escalated = by_status.get("ESCALATED", 0)
+        duplicates = sum(1 for c in cases if c.is_duplicate)
+        
+        return DashboardStats(
+            total_cases=len(cases),
+            by_status=by_status,
+            by_threat_level=by_threat,
+            escalated_count=escalated,
+            duplicate_count=duplicates,
+            chain_count=len(cases),
+        )
+    finally:
+        db.close()
 
 
 @router.get("/dashboard/recent", summary="Recent Cases (from blockchain)")
@@ -145,44 +164,33 @@ def dashboard_recent(
     limit: int = Query(10, ge=1, le=100),
     _token: dict = Depends(_verify_token),
 ):
-    """
-    Returns last N cases ordered by on-chain timestamp (newest first).
-    Source: getAllReports() on blockchain.
-    """
+    db = SessionLocal()
     try:
-        reports = get_all_reports_from_chain()
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Blockchain unavailable: {str(e)}")
-
-    # Sort by on-chain timestamp descending
-    reports.sort(key=lambda r: r.get("timestamp", 0), reverse=True)
-    recent = reports[:limit]
-    return [_enrich_report(r) for r in recent]
+        cases = db.query(Case).order_by(Case.submitted_at.desc()).limit(limit).all()
+        return [_case_to_dict(c) for c in cases]
+    finally:
+        db.close()
 
 
 @router.get("/dashboard/risk-distribution", summary="Risk Score Distribution (from blockchain)")
 def risk_distribution(_token: dict = Depends(_verify_token)):
-    """
-    Buckets risk scores from on-chain data.
-    Source: getAllReports() on blockchain.
-    """
+    db = SessionLocal()
     try:
-        reports = get_all_reports_from_chain()
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Blockchain unavailable: {str(e)}")
-
-    buckets = {"LOW (0-0.4)": 0, "MEDIUM (0.4-0.6)": 0, "HIGH (0.6-0.8)": 0, "CRITICAL (0.8-1.0)": 0}
-    for r in reports:
-        s = r.get("risk_score", 0.0)
-        if s < 0.4:
-            buckets["LOW (0-0.4)"] += 1
-        elif s < 0.6:
-            buckets["MEDIUM (0.4-0.6)"] += 1
-        elif s < 0.8:
-            buckets["HIGH (0.6-0.8)"] += 1
-        else:
-            buckets["CRITICAL (0.8-1.0)"] += 1
-    return buckets
+        cases =  db.query(Case.risk_score).all()
+        buckets = {"LOW (0-0.4)": 0, "MEDIUM (0.4-0.6)": 0, "HIGH (0.6-0.8)": 0, "CRITICAL (0.8-1.0)": 0}
+        for (rs,) in cases:
+            s = rs or 0.0
+            if s < 0.4:
+                buckets["LOW (0-0.4)"] += 1
+            elif s < 0.6:
+                buckets["MEDIUM (0.4-0.6)"] += 1
+            elif s < 0.8:
+                buckets["HIGH (0.6-0.8)"] += 1
+            else:
+                buckets["CRITICAL (0.8-1.0)"] += 1
+        return buckets
+    finally:
+        db.close()
 
 
 # ── Case Management — all data from blockchain ────────────────────────────────
@@ -193,41 +201,32 @@ def list_cases(
     threat_level_filter: Optional[str] = Query(None, alias="threat_level"),
     category_filter: Optional[str] = Query(None, alias="category"),
     page: int = Query(1, ge=1),
-    limit: int = Query(20, ge=1, le=200),
+    limit: int = Query(20, ge=1, le=2000),
     _token: dict = Depends(_verify_token),
 ):
-    """
-    Returns ALL reports from POCSORegistry.getAllReports() with optional filters and pagination.
-    Source: 100% blockchain.
-    """
+    db = SessionLocal()
     try:
-        reports = get_all_reports_from_chain()
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Blockchain unavailable: {str(e)}")
+        query = db.query(Case)
+        if status_filter:
+            query = query.filter(Case.status == status_filter.upper())
+        if category_filter:
+            query = query.filter(Case.category == category_filter)
+            
+        cases = query.order_by(Case.submitted_at.desc()).all()
+        enriched = [_case_to_dict(c) for c in cases]
+        
+        if threat_level_filter:
+            enriched = [r for r in enriched if r.get("threat_level", "").upper() == threat_level_filter.upper()]
 
-    # Enrich with computed fields
-    enriched = [_enrich_report(r) for r in reports]
-
-    # Apply filters
-    if status_filter:
-        enriched = [r for r in enriched if r.get("status", "").upper() == status_filter.upper()]
-    if threat_level_filter:
-        enriched = [r for r in enriched if r.get("threat_level", "").upper() == threat_level_filter.upper()]
-    if category_filter:
-        enriched = [r for r in enriched if r.get("category", "").lower() == category_filter.lower()]
-
-    # Sort newest first (by on-chain timestamp)
-    enriched.sort(key=lambda r: r.get("timestamp", 0), reverse=True)
-
-    # Paginate
-    start = (page - 1) * limit
-    page_slice: list = enriched[start: start + limit]
-    return {
-        "total": len(enriched),
-        "page": page,
-        "limit": limit,
-        "cases": page_slice,
-    }
+        start = (page - 1) * limit
+        return {
+            "total": len(enriched),
+            "page": page,
+            "limit": limit,
+            "cases": enriched[start: start + limit],
+        }
+    finally:
+        db.close()
 
 
 @router.get("/cases/{case_id}", summary="Case Detail (from blockchain)")
@@ -235,19 +234,14 @@ def get_case(
     case_id: str,
     _token: dict = Depends(_verify_token),
 ):
-    """
-    Fetches a single report from POCSORegistry.getReport(caseId).
-    Source: 100% blockchain.
-    """
+    db = SessionLocal()
     try:
-        report = get_report_from_chain(case_id)
-    except Exception as e:
-        detail = str(e)
-        if "Case not found" in detail:
-            raise HTTPException(status_code=404, detail="Case not found on-chain.")
-        raise HTTPException(status_code=502, detail=f"Blockchain read failed: {detail}")
-
-    return _enrich_report(report)
+        case = db.query(Case).filter(Case.case_id == case_id).first()
+        if not case:
+            raise HTTPException(status_code=404, detail="Case not found.")
+        return _case_to_dict(case)
+    finally:
+        db.close()
 
 
 @router.get("/cases/{case_id}/history", summary="Case Status History (from blockchain events)")
@@ -255,17 +249,21 @@ def get_case_history(
     case_id: str,
     _token: dict = Depends(_verify_token),
 ):
-    """
-    Reads StatusUpdated event logs for the case from the blockchain.
-    Each entry represents a status transition logged as an on-chain event.
-    Source: 100% blockchain event logs.
-    """
+    db = SessionLocal()
     try:
-        history = get_status_history_from_chain(case_id)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Blockchain event read failed: {str(e)}")
-
-    return history
+        history = db.query(StatusHistory).filter(StatusHistory.case_id == case_id).order_by(StatusHistory.updated_at.asc()).all()
+        return [
+            {
+                "case_id": h.case_id,
+                "old_status": h.old_status,
+                "new_status": h.new_status,
+                "notes": h.notes,
+                "timestamp": h.updated_at.isoformat(),
+                "tx_hash": h.blockchain_tx,
+            } for h in history
+        ]
+    finally:
+        db.close()
 
 
 # ── Blockchain Write ──────────────────────────────────────────────────────────

@@ -122,12 +122,69 @@ def track_report(case_id: str, case_key: str):
         if case_record.case_key_hash != provided_hash:
             raise HTTPException(status_code=403, detail="Invalid Case Key. Access Denied.")
             
+        # Auto-sync with Blockchain
+        try:
+            from services.blockchain_service import get_report_from_chain
+            from routers.admin import STATUS_MAP
+            
+            # Helper to invert enum map
+            REVERSE_STATUS = {v: k for k, v in STATUS_MAP.items()}
+            
+            chain_struct = get_report_from_chain(case_id)
+            if chain_struct:
+                chain_status_int = chain_struct[5] # Status enum is index 5
+                chain_status_str = REVERSE_STATUS.get(chain_status_int, case_record.status)
+                
+                if chain_status_str != case_record.status:
+                    import datetime
+                    # Sync DB to Blockchain
+                    case_record.status = chain_status_str
+                    case_record.last_updated = datetime.datetime.utcnow()
+                    db.commit()
+                    print(f"Auto-synced '{case_id}' to {chain_status_str} from blockchain.")
+                    
+                    # Also append this ghost update to history
+                    db.add(StatusHistory(
+                        case_id=case_id,
+                        old_status=case_record.status,
+                        new_status=chain_status_str,
+                        notes="Status auto-synced from Blockchain.",
+                        updated_at=datetime.datetime.utcnow()
+                    ))
+                    db.commit()
+        except Exception as e:
+            print(f"Warning: Track sync failed: {e}")
+            
+        # Fetch history
+        from storage.database import StatusHistory
+        histories = db.query(StatusHistory).filter(StatusHistory.case_id == case_id).order_by(StatusHistory.updated_at.asc()).all()
+        
+        history_list = []
+        history_list.append({
+            "status": "RECEIVED",
+            "timestamp": str(case_record.submitted_at),
+            "notes": "Report received and queued for AI triage."
+        })
+        
+        for h in histories:
+            history_list.append({
+                "status": h.new_status,
+                "timestamp": str(h.updated_at),
+                "notes": h.notes or f"Status updated to {h.new_status}"
+            })
+
+        calc_threat = "CRITICAL" if case_record.risk_score >= 0.8 else "HIGH" if case_record.risk_score >= 0.6 else "MEDIUM" if case_record.risk_score >= 0.4 else "LOW"
+        
         return TrackCaseResponse(
             case_id=case_record.case_id,
             status=case_record.status,
             evidence_type=case_record.evidence_type,
             category=case_record.category,
-            last_updated=str(case_record.last_updated)
+            last_updated=str(case_record.last_updated),
+            threat_level=calc_threat,
+            blockchain_tx=case_record.blockchain_tx,
+            ipfs_cid=case_record.ipfs_cid,
+            history=history_list,
         )
     finally:
         db.close()

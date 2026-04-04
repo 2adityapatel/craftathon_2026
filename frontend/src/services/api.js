@@ -106,32 +106,17 @@ export async function submitReport(payload) {
   }
 }
 
-/**
- * GET /api/v1/track?case_id=...&case_key=...
- */
 export async function trackCase(caseId, caseKey) {
-  await delay(1000)
-
-  // case_key validation (mock: any 32-char hex is valid for known cases)
   if (!caseKey || caseKey.length < 10) {
     throw new Error('Invalid case key. Please check and try again.')
   }
 
-  const found = mockCases[caseId]
-  if (!found) {
-    // For newly submitted cases in this session (stored in localStorage)
-    const stored = localStorage.getItem(`case_${caseId}`)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      return {
-        ...parsed,
-        history: [
-          { status: 'RECEIVED', timestamp: parsed.submitted_at, notes: 'Report received and queued for AI triage.' },
-        ],
-      }
-    }
-    throw new Error('Case not found. Please check your Case ID and Case Key.')
+  const response = await fetch(`${BASE_URL}/api/v1/track?case_id=${encodeURIComponent(caseId)}&case_key=${encodeURIComponent(caseKey)}`)
+  
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.detail || 'Case not found. Please check your Case ID and Case Key.')
   }
-
-  return found
+  
+  return response.json()
 }
