@@ -39,7 +39,7 @@ function StatusTimeline({ history }) {
                   {cfg.label || entry.status}
                 </span>
                 <span className="text-xs text-slate-600">
-                  {new Date(entry.timestamp).toLocaleString()}
+                  {new Date(entry.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', timeZoneName: 'short' })}
                 </span>
               </div>
               {entry.notes && (

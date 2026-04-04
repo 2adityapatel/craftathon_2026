@@ -6,15 +6,84 @@
 const BASE_URL = 'http://localhost:8000'
 const delay = (ms = 1200) => new Promise(res => setTimeout(res, ms))
 
+async function encryptPayload(data) {
+  // 1. Fetch public key
+  const rsaRes = await fetch(`${BASE_URL}/api/v1/public-key`)
+  const { public_key } = await rsaRes.json()
+  
+  // PEM to ArrayBuffer (strip headers)
+  const pemContents = public_key.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\n|\r/g, "")
+  const binaryDerString = window.atob(pemContents)
+  const binaryDer = new Uint8Array(binaryDerString.length)
+  for (let i = 0; i < binaryDerString.length; i++) {
+    binaryDer[i] = binaryDerString.charCodeAt(i)
+  }
+  
+  const rsaKey = await window.crypto.subtle.importKey(
+    "spki",
+    binaryDer.buffer,
+    { name: "RSA-OAEP", hash: "SHA-1" },
+    true,
+    ["encrypt"]
+  )
+  
+  // 2. Generate random AES-256-GCM key
+  const aesKey = await window.crypto.subtle.generateKey(
+    { name: "AES-GCM", length: 256 },
+    true,
+    ["encrypt", "decrypt"]
+  )
+  
+  // 3. Encrypt data payload
+  const iv = window.crypto.getRandomValues(new Uint8Array(16))
+  const encodedContent = new TextEncoder().encode(JSON.stringify(data))
+  
+  const encryptedBuf = await window.crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: iv },
+    aesKey,
+    encodedContent
+  )
+  
+  // Separate WebCrypto ciphertext & tag (last 16 bytes for GCM)
+  const cipherBytes = new Uint8Array(encryptedBuf)
+  const cipherText = cipherBytes.slice(0, cipherBytes.length - 16)
+  const tagBytes = cipherBytes.slice(cipherBytes.length - 16)
+  
+  // 4. Encrypt the AES key with RSA pub key
+  const exportedAesKey = await window.crypto.subtle.exportKey("raw", aesKey)
+  const encAesBuf = await window.crypto.subtle.encrypt(
+    { name: "RSA-OAEP" },
+    rsaKey,
+    exportedAesKey
+  )
+  
+  // 5. SHA-256 hash of original data
+  const hashBuf = await window.crypto.subtle.digest("SHA-256", encodedContent)
+  
+  // Helper to convert array buffer to hex
+  const toHex = buffer => Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('')
+  
+  return {
+    encrypted_payload: toHex(cipherText),
+    encrypted_aes_key: toHex(encAesBuf),
+    original_hash: toHex(hashBuf),
+    aes_iv: toHex(iv),
+    aes_tag: toHex(tagBytes)
+  }
+}
+
 /**
  * POST /api/v1/submit-plain
- * New no-encryption endpoint. Payload: { description, image (base64), url }
+ * Submits utilizing End-to-End Hybrid Crypto wrapping the JSON payload.
  */
 export async function submitReportPlain({ description, image, url }) {
+  // Encrypt the payload before sending
+  const encryptedData = await encryptPayload({ description, image, url })
+
   const response = await fetch(`${BASE_URL}/api/v1/submit-plain`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ description, image, url }),
+    body: JSON.stringify(encryptedData),
   })
 
   if (!response.ok) {

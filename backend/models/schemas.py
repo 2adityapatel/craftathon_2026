@@ -25,6 +25,13 @@ class PlainSubmitRequest(BaseModel):
     description: Optional[str] = None
     image: Optional[str] = None   # base64-encoded image string
     url: Optional[str] = None     # target URL of the harmful content
+    
+    # Optional Hybrid Encrypted Fields
+    encrypted_payload: Optional[str] = None
+    encrypted_aes_key: Optional[str] = None
+    original_hash: Optional[str] = None
+    aes_iv: Optional[str] = None
+    aes_tag: Optional[str] = None
 
 class SubmitReportResponse(BaseModel):
     case_id: str

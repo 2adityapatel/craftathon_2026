@@ -203,6 +203,27 @@ async def submit_plain(payload: PlainSubmitRequest):
     6. Anchors on Sepolia blockchain
     """
     try:
+        # Decrypt if hybrid crypto is used
+        if payload.encrypted_payload and payload.encrypted_aes_key:
+            try:
+                from services.privacy_service import PrivacyService
+                clean_payload_bytes = PrivacyService.decrypt_and_verify(
+                    encrypted_payload=payload.encrypted_payload,
+                    encrypted_aes_key=payload.encrypted_aes_key,
+                    original_hash=payload.original_hash,
+                    aes_iv=payload.aes_iv,
+                    aes_tag=payload.aes_tag
+                )
+                import json
+                decrypted_data = json.loads(clean_payload_bytes.decode('utf-8'))
+                
+                # Override the plain fields with the decrypted JSON securely extracted
+                payload.description = decrypted_data.get("description")
+                payload.image = decrypted_data.get("image")
+                payload.url = decrypted_data.get("url")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Hybrid decryption failed: {str(e)}")
+
         image_bytes = None
         if payload.image:
             image_bytes = base64.b64decode(payload.image)

@@ -36,17 +36,36 @@ export const CATEGORY_LABEL = {
 export function formatDate(val) {
   if (!val) return '—'
   // Handle Unix timestamp (number) from blockchain
-  const d = typeof val === 'number' ? new Date(val * 1000) : new Date(val)
+  let d;
+  if (typeof val === 'number') {
+    d = new Date(val * 1000)
+  } else if (typeof val === 'string' && !val.endsWith('Z') && !val.includes('+')) {
+    // Force UTC interpretation by using ISO 8601 format
+    d = new Date(val.replace(' ', 'T') + 'Z')
+  } else {
+    d = new Date(val)
+  }
+  
   if (isNaN(d.getTime())) return '—'
   return d.toLocaleString('en-IN', {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: true,
+    timeZone: 'Asia/Kolkata',
+    timeZoneName: 'short'
   })
 }
 
 export function timeAgo(val) {
   if (!val) return '—'
-  const d = typeof val === 'number' ? new Date(val * 1000) : new Date(val)
+  let d;
+  if (typeof val === 'number') {
+    d = new Date(val * 1000)
+  } else if (typeof val === 'string' && !val.endsWith('Z') && !val.includes('+')) {
+    d = new Date(val.replace(' ', 'T') + 'Z')
+  } else {
+    d = new Date(val)
+  }
+  
   const diff = Date.now() - d.getTime()
   const mins = Math.floor(diff / 60000)
   if (mins < 1) return 'just now'
