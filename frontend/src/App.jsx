@@ -16,6 +16,9 @@ import AdminCaseDetail      from './admin/pages/AdminCaseDetail'
 import AdminDomains         from './admin/pages/AdminDomains'
 import AdminAudit           from './admin/pages/AdminAudit'
 
+// Global components
+import POCSOChatbot         from './components/POCSOChatbot'
+
 import { LanguageProvider } from './context/LanguageContext'
 
 export default function App() {
@@ -52,6 +55,9 @@ export default function App() {
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+
+        {/* AI Chatbot — floating widget on all pages */}
+        <POCSOChatbot />
       </AuthProvider>
       </LanguageProvider>
     </BrowserRouter>
