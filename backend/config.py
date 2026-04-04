@@ -35,5 +35,6 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"  # Silently ignore unknown env vars (e.g. VITE_GROQ_API_KEY)
 
 settings = Settings()
