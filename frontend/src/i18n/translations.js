@@ -71,7 +71,7 @@ export const translations = {
       securityTitle: "Security",
       s1: "End-to-end encrypted",
       s2: "Blockchain-anchored proof",
-      copyright: "© 2026 POCSO Secure Report (Awaaz). Built for child protection. Not for profit.",
+      copyright: "© 2026 Awaaz Secure Report. Built for child protection. Not for profit.",
       network: "Sepolia ETH Testnet Connected"
     },
     reportContext: {
@@ -192,7 +192,7 @@ export const translations = {
       securityTitle: "सुरक्षा",
       s1: "एंड-टू-एंड एन्क्रिप्टेड",
       s2: "ब्लॉकचेन प्रमाणित",
-      copyright: "© 2026 POCSO Secure Report (Awaaz). बाल संरक्षण के लिए निर्मित। नॉट-फॉर-प्रॉफिट।",
+      copyright: "© 2026 Awaaz Secure Report (आवाज़). बाल संरक्षण के लिए निर्मित। नॉट-फॉर-प्रॉफिट।",
       network: "Sepolia ETH टेस्टनेट जुड़ा हुआ है"
     },
     reportContext: {
