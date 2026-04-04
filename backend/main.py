@@ -58,15 +58,15 @@ async def submit_report(payload: SubmitReportRequest):
             report_hash = hashlib.sha256(clean_payload).hexdigest()
         else:
             # Original encryption logic (commented out for now)
-            # clean_payload = PrivacyService.decrypt_and_verify(
-            #     encrypted_payload=payload.encrypted_payload,
-            #     encrypted_aes_key=payload.encrypted_aes_key,
-            #     original_hash=payload.original_hash,
-            #     aes_iv=payload.aes_iv,
-            #     aes_tag=payload.aes_tag
-            # )
-            # report_hash = payload.original_hash
-            raise HTTPException(status_code=400, detail="Encryption is disabled for this test. Please use plain_payload.")
+            clean_payload = PrivacyService.decrypt_and_verify(
+                encrypted_payload=payload.encrypted_payload,
+                encrypted_aes_key=payload.encrypted_aes_key,
+                original_hash=payload.original_hash,
+                aes_iv=payload.aes_iv,
+                aes_tag=payload.aes_tag
+            )
+            report_hash = payload.original_hash
+            # raise HTTPException(status_code=400, detail="Encryption is disabled for this test. Please use plain_payload.")
         
         # Step 2: AI Analysis
         analysis_results = await AIAnalysisService.analyze_evidence(

@@ -60,14 +60,16 @@ def main():
     time.sleep(2)
     
     # 2. URL Fetching & Reputation Testing
-    run_test("Malicious URL Submission (Phishing Mock)", text_content="Please investigate this attack   er domain: http://phishing.com/scam-site")
+    run_test("Malicious URL Submission (Phishing Mock)", text_content="Please investigate this attacker domain: http://phishing.com/scam-site")
     time.sleep(2)
     
     # 3. Vision Testing (Uses the local JPGs)
-    run_test("Normal Image Detection", file_path="normal.jpg", text_content="Checking this innocent image")
+    run_test("NSFW Image Detection", file_path="nsfw.jpg", text_content="I suspect this is illegal porn")
     time.sleep(2)
     
-    run_test("NSFW Image Detection", file_path="nsfw.jpg", text_content="I suspect this is illegal porn")
+    # 4. OCR / Chat Screenshot Testing (Uses chat.png)
+    # NOTE: Keep a file named 'chat.png' in the backend folder to see the OCR + Abusive Severity in action!
+    run_test("Abusive Chat Screenshot Detection", file_path="chat.png", text_content="This is a screenshot of our conversation")
 
 if __name__ == "__main__":
     main()

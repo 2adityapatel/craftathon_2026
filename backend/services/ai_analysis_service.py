@@ -1,5 +1,6 @@
 from ai.text_model import analyze_text
 from ai.image_model import analyze_image
+from ai.ocr_model import extract_text_from_image
 from ai.scorer import compute_risk_score, threat_level
 from ai.duplicate_detector import check_duplicate_url
 
@@ -24,7 +25,8 @@ class AIAnalysisService:
     def is_suspicious_text(text: str) -> bool:
         # Standard English + Indian/Hinglish abusive terms
         keywords = ["porn", "xxx", "betting", "casino", "drugs", "csam", "rape", "murder", "child", 
-                    "bc", "mc", "bhosd", "chutiy", "madarchod", "behenchod", "randi", "gandu", "maar dalunga", "kutta"]
+                    "bc", "mc", "bhosd", "chutiy", "madarchod", "behenchod", "randi", "gandu", 
+                    "maar dalunga", "kutta", "kutte", "ma bahen", "chhodu", "maar dunga", "nude", "nudes", "leak", "blackmail", "send pictures", "route to school", "send photos"]
         return any(k in text.lower() for k in keywords)
 
     @staticmethod
@@ -38,15 +40,25 @@ class AIAnalysisService:
         repeat_count = 0
         domain = None
         
-        # Merge all textual inputs from description or content (if it's not a binary file like image)
+        # Merge all textual inputs from description or content
         text_content = ""
         if description: text_content += description + " "
-        if evidence_type in ["text", "url", "mixed"] and content:
+        
+        vision_score = 0.0
+        is_binary_image = False
+        
+        if content:
             try:
-                # Use strict decoding: if it's a JPG, it throws an error and cleanly skips appending binary gibberish into the text pipeline.
+                # Use strict decoding: if it's a JPG, it throws an error and cleanly skips
                 text_content += content.decode("utf-8", errors="strict")
             except UnicodeDecodeError:
-                pass
+                # It is a raw binary image. Grab chat-screenshot text FIRST!
+                is_binary_image = True
+                if evidence_type in ["image", "mixed"] and len(content) > 100:
+                    ocr_text = extract_text_from_image(content)
+                    if ocr_text:
+                        print(f"\n[BACKEND OCR] Instantly pulled chat string from image: {ocr_text}")
+                        text_content += " " + ocr_text
                 
         # 1. URL Lifecycle (Domain, Reputation, Fetch)
         text_score_penalty = 0.0
@@ -77,28 +89,22 @@ class AIAnalysisService:
                 
         # Layer 4: Heuristics / Keyword Scan
         if AIAnalysisService.is_suspicious_text(text_content):
-            text_score_penalty += 0.3
-            if category == "unknown": category = "suspicious_keywords"
+            text_score_penalty += 0.75  # Massive penalty for hard slurs that translator misses
+            if category == "unknown": category = "suspicious_keywords_in_text"
             
-        # 5. Deep ML NLP (XLM-RoBERTa)
+        # 5. Deep ML NLP (XLM-RoBERTa / Toxic-Bert)
         text_score = 0.0
         if text_content.strip():
+            print(f"[BACKEND NLP] Sending directly to Deep-Translator and HuggingFace: {text_content.strip()}")
             ml_text_score = await analyze_text(text_content)
             # Combine heuristic penalty with ML score
             text_score = min(ml_text_score + text_score_penalty, 1.0)
             if ml_text_score > 0.5: category = "hate_speech_or_harassment"
             
         # 6. Deep Vision (NSFW/CSAM)
-        vision_score = 0.0
-        # Check if the evidence_type explicitly states image OR mixed payload format signifies image bytes
-        if evidence_type in ["image", "mixed"] and content and len(content) > 100:
-            # We assume it's an image if it can't be purely decoded as text
-            try:
-                content.decode('utf-8')
-                # If we get here fully, it might purely be text, skip vision analysis
-            except UnicodeDecodeError:
-                vision_score = await analyze_image(content)
-                if vision_score > 0.5: category = "NSFW_Violation"
+        if is_binary_image and evidence_type in ["image", "mixed"] and len(content) > 100:
+            vision_score = await analyze_image(content)
+            if vision_score > 0.5: category = "NSFW_Violation"
             
         # 7. Final Scoring Engine
         risk_score = compute_risk_score(vision_score, text_score, repeat_count)
