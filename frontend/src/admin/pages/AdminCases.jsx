@@ -54,7 +54,7 @@ export default function AdminCases() {
   return (
     <AdminLayout
       title={isPriority ? 'High Priority Cases' : 'Case Queue'}
-      breadcrumb={`POCSO Authority Portal / ${isPriority ? 'High Priority' : 'Case Queue'}`}
+      breadcrumb={`Awaaz Authority Portal / ${isPriority ? 'High Priority' : 'Case Queue'}`}
     >
       {/* Filters */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 mb-4 flex flex-wrap gap-3 items-center">

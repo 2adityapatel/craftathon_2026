@@ -8,7 +8,11 @@ const delay = (ms = 1200) => new Promise(res => setTimeout(res, ms))
 
 async function encryptPayload(data) {
   // 1. Fetch public key
-  const rsaRes = await fetch(`${BASE_URL}/api/v1/public-key`)
+  const rsaRes = await fetch(`${BASE_URL}/api/v1/public-key`, {
+    headers: {
+      'ngrok-skip-browser-warning': 'true'
+    }
+  })
   const { public_key } = await rsaRes.json()
   
   // PEM to ArrayBuffer (strip headers)
@@ -82,7 +86,10 @@ export async function submitReportPlain({ description, image, url }) {
 
   const response = await fetch(`${BASE_URL}/api/v1/submit-plain`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': 'true'
+    },
     body: JSON.stringify(encryptedData),
   })
 
@@ -180,7 +187,11 @@ export async function trackCase(caseId, caseKey) {
     throw new Error('Invalid case key. Please check and try again.')
   }
 
-  const response = await fetch(`${BASE_URL}/api/v1/track?case_id=${encodeURIComponent(caseId)}&case_key=${encodeURIComponent(caseKey)}`)
+  const response = await fetch(`${BASE_URL}/api/v1/track?case_id=${encodeURIComponent(caseId)}&case_key=${encodeURIComponent(caseKey)}`, {
+    headers: {
+      'ngrok-skip-browser-warning': 'true'
+    }
+  })
   
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))

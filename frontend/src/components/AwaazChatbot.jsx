@@ -25,7 +25,7 @@ const BACKEND_URL = import.meta.env.VITE_CHAT_API_URL || "";
 const GROQ_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
 const USE_BACKEND = !!BACKEND_URL;
 
-const SYSTEM_PROMPT = `You are a kind, calm support assistant for the POCSO Safe Reporting System — a platform that helps people report online child exploitation safely and anonymously.
+const SYSTEM_PROMPT = `You are a kind, calm support assistant for the Awaaz Safe Reporting System — a platform that helps people report online child exploitation safely and anonymously.
 
 STRICT RULES:
 1. Keep EVERY answer to 2-3 short sentences. Be warm but brief. Never write paragraphs.
@@ -56,7 +56,7 @@ Be human. Be gentle. Be brief.`;
 const WELCOME_MSG = {
   role: "assistant",
   content:
-    "Hello. You've reached a safe, anonymous space. Nothing you share here is stored or logged — your privacy is fully protected.\n\nI'm here to help you understand or use the POCSO Reporting System. You can ask me about anonymous reporting, how your data stays secure, how cases are tracked, or anything else about the system.\n\nTake your time. I'm here whenever you're ready.",
+    "Hello. You've reached a safe, anonymous space. Nothing you share here is stored or logged — your privacy is fully protected.\n\nI'm here to help you understand or use the Awaaz Reporting System. You can ask me about anonymous reporting, how your data stays secure, how cases are tracked, or anything else about the system.\n\nTake your time. I'm here whenever you're ready.",
 };
 
 async function callBackend(message, history) {
@@ -93,7 +93,7 @@ async function callGroqDirect(message, history) {
   return data.choices[0].message.content;
 }
 
-export default function POCSOChatbot() {
+export default function AwaazChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([WELCOME_MSG]);
   const [input, setInput] = useState("");
@@ -190,7 +190,7 @@ export default function POCSOChatbot() {
               </div>
               <div className="min-w-0">
                 <h2 className="text-sm font-semibold text-slate-100 truncate">
-                  POCSO Safe Reporting
+                  Awaaz Safe Reporting
                 </h2>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <Lock size={10} className="text-teal-400/70" />

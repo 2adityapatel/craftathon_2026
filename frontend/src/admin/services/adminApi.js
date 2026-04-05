@@ -24,6 +24,7 @@ async function apiRequest(path, options = {}) {
   const token = getToken()
   const headers = {
     'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   }

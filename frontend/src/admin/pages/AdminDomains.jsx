@@ -12,7 +12,7 @@ export default function AdminDomains() {
   }, [])
 
   return (
-    <AdminLayout title="Repeat Offenders" breadcrumb="POCSO Authority Portal / Repeat Offenders">
+    <AdminLayout title="Repeat Offenders" breadcrumb="Awaaz Authority Portal / Repeat Offenders">
 
       {/* Info banner */}
       <div className="mb-5 flex items-start gap-3 bg-purple-50 border border-purple-200 px-4 py-3 rounded-lg">

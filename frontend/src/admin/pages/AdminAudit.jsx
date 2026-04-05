@@ -32,7 +32,7 @@ export default function AdminAudit() {
   }
 
   return (
-    <AdminLayout title="Blockchain Audit Log" breadcrumb="POCSO Authority Portal / Audit Log">
+    <AdminLayout title="Blockchain Audit Log" breadcrumb="Awaaz Authority Portal / Audit Log">
 
       {/* Info */}
       <div className="mb-5 flex items-start gap-3 bg-teal-50 border border-teal-200 px-4 py-3 rounded-lg">
