@@ -1,19 +1,27 @@
-// Shared helpers used across admin components
+// Shared helpers used across admin components — Sovereign Sentinel tokens
+
+// ── Inline-style chip builders (matching global CSS chip classes via style objects) ──
+const chipBase = {
+  display: 'inline-flex', alignItems: 'center',
+  padding: '2px 8px', borderRadius: '2px',
+  fontSize: '0.6875rem', fontWeight: 500,
+  fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap',
+}
 
 export const THREAT_BADGE = {
-  CRITICAL: 'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-800 border border-red-200',
-  HIGH:     'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-800 border border-orange-200',
-  MEDIUM:   'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200',
-  LOW:      'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-800 border border-green-200',
+  CRITICAL: 'badge-critical',
+  HIGH:     'badge-high',
+  MEDIUM:   'badge-medium',
+  LOW:      'badge-low',
 }
 
 export const STATUS_BADGE = {
-  RECEIVED:     'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200',
-  UNDER_REVIEW: 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200',
-  VERIFIED:     'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200',
-  ESCALATED:    'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 border border-red-200',
-  ACTION_TAKEN: 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200',
-  CLOSED:       'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200',
+  RECEIVED:     'status-received',
+  UNDER_REVIEW: 'chip-warning',
+  VERIFIED:     'chip-confirmed',
+  ESCALATED:    'chip-critical',
+  ACTION_TAKEN: 'chip-confirmed',
+  CLOSED:       'status-closed',
 }
 
 export const STATUS_LABEL = {
@@ -35,37 +43,20 @@ export const CATEGORY_LABEL = {
 
 export function formatDate(val) {
   if (!val) return '—'
-  // Handle Unix timestamp (number) from blockchain
-  let d;
-  if (typeof val === 'number') {
-    d = new Date(val * 1000)
-  } else if (typeof val === 'string' && !val.endsWith('Z') && !val.includes('+')) {
-    // Force UTC interpretation by using ISO 8601 format
-    d = new Date(val.replace(' ', 'T') + 'Z')
-  } else {
-    d = new Date(val)
-  }
-  
+  let d
+  if (typeof val === 'number') d = new Date(val * 1000)
+  else if (typeof val === 'string' && !val.endsWith('Z') && !val.includes('+')) d = new Date(val.replace(' ', 'T') + 'Z')
+  else d = new Date(val)
   if (isNaN(d.getTime())) return '—'
-  return d.toLocaleString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', hour12: true,
-    timeZone: 'Asia/Kolkata',
-    timeZoneName: 'short'
-  })
+  return d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata', timeZoneName: 'short' })
 }
 
 export function timeAgo(val) {
   if (!val) return '—'
-  let d;
-  if (typeof val === 'number') {
-    d = new Date(val * 1000)
-  } else if (typeof val === 'string' && !val.endsWith('Z') && !val.includes('+')) {
-    d = new Date(val.replace(' ', 'T') + 'Z')
-  } else {
-    d = new Date(val)
-  }
-  
+  let d
+  if (typeof val === 'number') d = new Date(val * 1000)
+  else if (typeof val === 'string' && !val.endsWith('Z') && !val.includes('+')) d = new Date(val.replace(' ', 'T') + 'Z')
+  else d = new Date(val)
   const diff = Date.now() - d.getTime()
   const mins = Math.floor(diff / 60000)
   if (mins < 1) return 'just now'
@@ -77,30 +68,30 @@ export function timeAgo(val) {
 
 export function RiskBar({ score }) {
   const pct = Math.round(score * 100)
-  const color = score >= 0.8 ? 'bg-red-500' : score >= 0.6 ? 'bg-orange-500' : score >= 0.4 ? 'bg-amber-500' : 'bg-green-500'
+  const barColor = score >= 0.8 ? 'var(--tertiary)' : score >= 0.6 ? 'var(--primary)' : score >= 0.4 ? 'var(--primary-dim)' : 'var(--secondary)'
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 rounded-full bg-slate-200 overflow-hidden min-w-[60px]">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ flex: 1, height: 3, borderRadius: '2px', background: 'var(--surface-highest)', overflow: 'hidden', minWidth: 60 }}>
+        <div style={{ height: '100%', borderRadius: '2px', background: barColor, width: `${pct}%` }} />
       </div>
-      <span className="text-xs font-mono text-slate-600 w-8 text-right">{pct}%</span>
+      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '0.6875rem', color: 'var(--on-surface-variant)', width: 30, textAlign: 'right' }}>{pct}%</span>
     </div>
   )
 }
 
 export function Spinner({ size = 'md' }) {
-  const sz = size === 'sm' ? 'w-4 h-4' : size === 'lg' ? 'w-8 h-8' : 'w-6 h-6'
+  const sz = size === 'sm' ? 14 : size === 'lg' ? 28 : 20
   return (
-    <div className={`${sz} border-2 border-slate-300 border-t-blue-700 rounded-full animate-spin`} />
+    <div style={{ width: sz, height: sz, borderRadius: '50%', border: '2px solid var(--outline-variant)', borderTopColor: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
   )
 }
 
 export function EmptyState({ icon = '📭', title, desc }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="text-4xl mb-3">{icon}</div>
-      <p className="text-slate-700 font-medium mb-1">{title}</p>
-      {desc && <p className="text-sm text-slate-500">{desc}</p>}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 1.5rem', textAlign: 'center' }}>
+      <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>{icon}</div>
+      <p style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: '0.9375rem', color: 'var(--on-surface)', marginBottom: 6 }}>{title}</p>
+      {desc && <p style={{ fontSize: '0.8125rem', color: 'var(--on-surface-variant)' }}>{desc}</p>}
     </div>
   )
 }

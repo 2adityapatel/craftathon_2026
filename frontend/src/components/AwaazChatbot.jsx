@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
-  MessageCircleHeart,
+  MessageSquare,
   X,
   Send,
   ShieldCheck,
@@ -8,7 +8,9 @@ import {
   Loader2,
   Lock,
   AlertTriangle,
+  Server
 } from "lucide-react";
+import { useLanguage } from '../context/LanguageContext';
 
 /*
  * ── Configuration ─────────────────────────────────────────────────────
@@ -94,6 +96,7 @@ async function callGroqDirect(message, history) {
 }
 
 export default function AwaazChatbot() {
+  const { lang } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([WELCOME_MSG]);
   const [input, setInput] = useState("");
@@ -164,55 +167,112 @@ export default function AwaazChatbot() {
 
   return (
     <>
-      {/* Floating Toggle */}
+      {/* PROFESSIONAL FIX 1: Floating Icon Toggle */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          aria-label="Open support chat"
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 px-5 py-3.5 text-white shadow-lg shadow-slate-900/30 transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95 ring-1 ring-white/10"
+          aria-label="Open secure chat"
+          className="btn-primary"
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            zIndex: 50,
+            width: 52,
+            height: 52,
+            padding: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '4px',
+            boxShadow: '0 10px 25px -5px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,186,59,0.2)',
+            transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          }}
+          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
         >
-          <MessageCircleHeart size={22} className="text-teal-300" />
-          <span className="text-sm font-medium tracking-wide">Safe Chat</span>
+          <MessageSquare size={22} style={{ color: 'var(--surface)' }} />
+          
+          {/* subtle unread indicator */}
+          <span style={{ 
+            position: 'absolute', top: -3, right: -3, width: 10, height: 10, 
+            background: 'var(--primary)', border: '2px solid var(--surface)', borderRadius: '50%' 
+          }} />
         </button>
       )}
 
       {/* Chat Window */}
       {isOpen && (
         <div
-          className="fixed bottom-6 right-6 z-50 flex flex-col w-[92vw] max-w-[420px] h-[70vh] max-h-[640px] min-h-[400px] rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl shadow-black/40 overflow-hidden"
-          style={{ animation: "slideUp 0.3s ease-out" }}
+          className="card-glass"
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            zIndex: 50,
+            display: 'flex',
+            flexDirection: 'column',
+            width: '92vw',
+            maxWidth: 420,
+            height: '70vh',
+            maxHeight: 640,
+            minHeight: 400,
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+            animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
         >
-          {/* Header */}
-          <div className="flex items-center justify-between gap-3 px-5 py-4 bg-gradient-to-r from-slate-800 to-slate-800/80 border-b border-slate-700/50">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="flex items-center justify-center w-9 h-9 rounded-full bg-teal-500/15 ring-1 ring-teal-400/30 shrink-0">
-                <ShieldCheck size={18} className="text-teal-400" />
+          {/* PROFESSIONAL FIX 3: Header Architecture */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+            padding: '16px 20px', background: 'var(--surface-high)', borderBottom: '1px solid var(--outline-variant)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 38, height: 38, borderRadius: 2, shrink: 0,
+                background: 'rgba(255,186,59,0.1)', border: '1px solid rgba(255,186,59,0.25)'
+              }}>
+                <Server size={18} style={{ color: 'var(--primary)' }} />
               </div>
-              <div className="min-w-0">
-                <h2 className="text-sm font-semibold text-slate-100 truncate">
-                  Awaaz Safe Reporting
-                </h2>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <Lock size={10} className="text-teal-400/70" />
-                  <span className="text-[11px] text-slate-400 tracking-wide">
-                    End-to-end encrypted · Anonymous
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <h2 style={{
+                    fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '0.9375rem',
+                    color: 'var(--on-surface)', letterSpacing: '0.04em',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                  }}>
+                    {lang === 'hi' ? 'आवाज़ चैट' : 'Awaaz Chat'}
+                  </h2>
+                  <div style={{ 
+                    display: 'flex', alignItems: 'center', gap: 4, 
+                    background: 'rgba(33,179,117,0.1)', padding: '2px 6px', borderRadius: 2, border: '1px solid rgba(33,179,117,0.2)' 
+                  }}>
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgb(33,179,117)' }} className="animate-pulse" />
+                    <span style={{ fontSize: '0.55rem', fontFamily: "'JetBrains Mono',monospace", color: 'rgb(44,212,141)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Live</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                  <Lock size={10} style={{ color: 'var(--outline)' }} />
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '0.625rem', color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    End-to-end encrypted
                   </span>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, shrink: 0 }}>
               <button
                 onClick={() => setShowPanicConfirm(true)}
-                aria-label="Clear all data and close"
                 title="Erase chat & close"
-                className="p-2 rounded-lg text-red-400/70 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                style={{ background: 'none', border: 'none', padding: 8, cursor: 'pointer', color: 'var(--tertiary)' }}
               >
                 <Trash2 size={16} />
               </button>
               <button
                 onClick={() => setIsOpen(false)}
-                aria-label="Minimize chat"
-                className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors"
+                title="Minimize chat"
+                style={{ background: 'none', border: 'none', padding: 8, cursor: 'pointer', color: 'var(--outline)' }}
               >
                 <X size={16} />
               </button>
@@ -221,96 +281,134 @@ export default function AwaazChatbot() {
 
           {/* Panic Confirm */}
           {showPanicConfirm && (
-            <div className="px-4 py-3 bg-red-950/60 border-b border-red-500/20 flex items-center gap-3">
-              <AlertTriangle size={16} className="text-red-400 shrink-0" />
-              <p className="text-xs text-red-200 flex-1">
-                This will permanently erase this conversation.
-              </p>
-              <button
-                onClick={panicClear}
-                className="px-3 py-1 rounded-md bg-red-500/20 text-red-300 text-xs font-medium hover:bg-red-500/30 transition-colors"
-              >
-                Erase
-              </button>
-              <button
-                onClick={() => setShowPanicConfirm(false)}
-                className="px-3 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs font-medium hover:bg-slate-700/60 transition-colors"
-              >
-                Cancel
-              </button>
+            <div style={{
+              background: 'rgba(255,113,98,0.08)', borderBottom: '1px solid rgba(255,113,98,0.2)',
+              padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12
+            }}>
+              <AlertTriangle size={16} style={{ color: 'var(--tertiary)', flexShrink: 0 }} />
+              <p style={{ fontSize: '0.75rem', color: 'var(--tertiary)', flex: 1, lineHeight: 1.4 }}>This will permanently erase this conversation.</p>
+              <button onClick={panicClear} style={{ background: 'rgba(255,113,98,0.15)', color: 'var(--tertiary)', border: '1px solid rgba(255,113,98,0.3)', padding: '4px 10px', borderRadius: 2, fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', cursor: 'pointer' }}>Erase</button>
+              <button onClick={() => setShowPanicConfirm(false)} style={{ background: 'transparent', color: 'var(--outline)', border: '1px solid var(--outline-variant)', padding: '4px 10px', borderRadius: 2, fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', cursor: 'pointer' }}>Cancel</button>
             </div>
           )}
 
-          {/* Messages */}
+          {/* PROFESSIONAL FIX 2 & 4: Messages, Avatars and Contrast */}
           <div
             ref={scrollRef}
-            className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
+            style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}
           >
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-[82%] rounded-2xl px-4 py-2.5 text-[13.5px] leading-relaxed ${
-                    msg.role === "user"
-                      ? "bg-teal-600/25 text-teal-50 rounded-br-md border border-teal-500/15"
-                      : "bg-slate-800/70 text-slate-200 rounded-bl-md border border-slate-700/40"
-                  }`}
-                >
-                  {msg.content.split("\n").map((line, j) => (
-                    <p key={j} className={j > 0 ? "mt-2" : ""}>
-                      {line}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            ))}
+            {messages.map((msg, i) => {
+              const isUser = msg.role === 'user';
+              return (
+                <div key={i} style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', gap: 10, alignItems: 'flex-end' }}>
+                  
+                  {/* Avatar for Bot only */}
+                  {!isUser && (
+                    <div style={{ 
+                      width: 26, height: 26, borderRadius: 2, background: 'var(--surface-high)', 
+                      border: '1px solid var(--outline-variant)', display: 'flex', alignItems: 'center', 
+                      justifyContent: 'center', flexShrink: 0, marginBottom: 2 
+                    }}>
+                      <ShieldCheck size={13} style={{ color: 'var(--primary)' }} />
+                    </div>
+                  )}
 
+                  <div
+                    style={{
+                      maxWidth: '78%',
+                      padding: '10px 14px',
+                      fontSize: '0.8125rem',
+                      lineHeight: 1.5,
+                      borderRadius: 4,
+                      position: 'relative',
+                      ...(isUser
+                        ? { 
+                            background: 'var(--primary)', 
+                            color: '#000000', // high contrast dark text against brand amber
+                            borderBottomRightRadius: 0, 
+                            fontWeight: 500,
+                            boxShadow: '0 2px 4px rgba(255,186,59,0.1)'
+                          }
+                        : { 
+                            background: 'var(--surface-high)', 
+                            border: '1px solid var(--outline-variant)', 
+                            color: 'var(--on-surface)', 
+                            borderBottomLeftRadius: 0 
+                          })
+                    }}
+                  >
+                    {msg.content.split("\n").map((line, j) => (
+                      <p key={j} style={{ marginTop: j > 0 ? 8 : 0 }}>{line}</p>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Typing Indicator */}
             {isTyping && (
-              <div className="flex justify-start">
-                <div className="bg-slate-800/70 border border-slate-700/40 rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-teal-400/70 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-teal-400/70 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-teal-400/70 animate-bounce" style={{ animationDelay: "300ms" }} />
+              <div style={{ display: 'flex', justifyContent: 'flex-start', gap: 10, alignItems: 'flex-end' }}>
+                <div style={{ 
+                  width: 26, height: 26, borderRadius: 2, background: 'var(--surface-high)', 
+                  border: '1px solid var(--outline-variant)', display: 'flex', alignItems: 'center', 
+                  justifyContent: 'center', flexShrink: 0, marginBottom: 2 
+                }}>
+                  <ShieldCheck size={13} style={{ color: 'var(--primary)' }} />
+                </div>
+                <div style={{ 
+                  background: 'var(--surface-high)', border: '1px solid var(--outline-variant)', 
+                  borderRadius: 4, borderBottomLeftRadius: 0, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 5 
+                }}>
+                  <span className="dot-warn animate-bounce" style={{ opacity: 0.6, width: 5, height: 5, animationDelay: '0ms' }} />
+                  <span className="dot-warn animate-bounce" style={{ opacity: 0.6, width: 5, height: 5, animationDelay: '150ms' }} />
+                  <span className="dot-warn animate-bounce" style={{ opacity: 0.6, width: 5, height: 5, animationDelay: '300ms' }} />
                 </div>
               </div>
             )}
           </div>
 
           {/* Emergency Banner */}
-          <div className="px-4 py-2 bg-amber-950/30 border-t border-amber-500/10">
-            <p className="text-[11px] text-amber-200/60 text-center leading-snug">
-              In immediate danger? Call{" "}
-              <span className="font-semibold text-amber-300/80">1098</span>{" "}
-              (Child Helpline) or local emergency services.
+          <div style={{ background: 'rgba(255,113,98,0.04)', borderTop: '1px solid rgba(255,113,98,0.15)', padding: '10px 16px', textAlign: 'center' }}>
+            <p style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)' }}>
+               {lang === 'hi' ? 'तत्काल खतरे में हैं?' : 'In immediate danger?'} Call <strong style={{ color: 'var(--tertiary)' }}>1098</strong> (Child Helpline).
             </p>
           </div>
 
           {/* Input */}
-          <div className="px-3 pb-3 pt-1 bg-slate-900">
-            <div className="flex items-center gap-2 rounded-xl bg-slate-800/60 border border-slate-700/50 px-3 py-1 focus-within:border-teal-500/30 focus-within:ring-1 focus-within:ring-teal-500/10 transition-all">
+          <div style={{ padding: '12px 16px', background: 'var(--surface-highest)', borderTop: '1px solid var(--outline-variant)' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
               <textarea
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type your message..."
+                placeholder={lang === 'hi' ? 'अपना संदेश टाइप करें...' : 'Type your message...'}
                 rows={1}
-                className="flex-1 bg-transparent text-sm text-slate-100 placeholder-slate-500 resize-none py-2 outline-none max-h-24"
+                className="input-field"
+                style={{ 
+                  flex: 1, resize: 'none', padding: '12px 14px', maxHeight: 96, borderRadius: 2, 
+                  background: 'var(--surface)', fontSize: '0.8125rem' 
+                }}
                 disabled={isTyping}
               />
               <button
                 onClick={sendMessage}
                 disabled={!input.trim() || isTyping}
                 aria-label="Send message"
-                className="p-2 rounded-lg text-teal-400 hover:bg-teal-500/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
+                style={{
+                  background: 'var(--primary)',
+                  color: 'var(--surface)',
+                  border: 'none',
+                  borderRadius: 2,
+                  padding: 11,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                  opacity: (!input.trim() || isTyping) ? 0.3 : 1,
+                  cursor: (!input.trim() || isTyping) ? 'not-allowed' : 'pointer',
+                  transition: 'opacity 0.2s'
+                }}
               >
-                {isTyping ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  <Send size={18} />
-                )}
+                {isTyping ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} style={{ marginLeft: 2 }} />}
               </button>
             </div>
           </div>
@@ -319,8 +417,8 @@ export default function AwaazChatbot() {
 
       <style>{`
         @keyframes slideUp {
-          from { opacity: 0; transform: translateY(16px); }
-          to   { opacity: 1; transform: translateY(0); }
+          from { opacity: 0; transform: translateY(16px) scale(0.98); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
         }
       `}</style>
     </>
