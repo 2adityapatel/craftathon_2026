@@ -8,64 +8,103 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Deep Navy base
+        // ── Sovereign Sentinel surface stack ──
+        surface: {
+          void:    '#0a0e14',
+          low:     '#0e141c',
+          DEFAULT: '#121a25',
+          high:    '#16202e',
+          highest: '#1a2637',
+          variant: '#1a2637',
+          bright:  '#1e2d41',
+        },
+        // ── Primary (Amber/Gold) ──
+        primary: {
+          DEFAULT: '#ffba3b',
+          dim:     '#f4ab04',
+          muted:   '#F2A900',
+          container: '#604100',
+          on:      '#573b00',
+        },
+        // ── Secondary (Jade/Green) ──
+        secondary: {
+          DEFAULT:   '#21b375',
+          container: '#004529',
+          on:        '#51d695',
+        },
+        // ── Tertiary / Critical (Red) ──
+        tertiary: {
+          DEFAULT: '#ff7162',
+        },
+        // ── Text / Outline ──
+        outline:  {
+          DEFAULT: '#6a768a',
+          variant: '#3c495b',
+        },
+        'on-surface':         '#d9e6fd',
+        'on-surface-variant': '#9facc1',
+
+        // Keep backward-compat aliases used by admin pages
         navy: {
-          950: '#030712',
-          900: '#060e1f',
-          800: '#0a1628',
-          700: '#0f1f38',
-          600: '#162748',
-          500: '#1e3358',
+          950: '#0a0e14',
+          900: '#0e141c',
+          800: '#121a25',
+          700: '#16202e',
+          600: '#1a2637',
+          500: '#1e2d41',
         },
-        // Gold / Amber accent
         amber: {
-          300: '#fcd34d',
-          400: '#fbbf24',
-          500: '#f59e0b',
-          600: '#d97706',
+          300: '#ffdead',
+          400: '#ffcc7b',
+          500: '#ffba3b',
+          600: '#f4ab04',
         },
-        // Teal secondary
         teal: {
-          400: '#2dd4bf',
-          500: '#14b8a6',
-          600: '#0d9488',
+          400: '#51d695',
+          500: '#21b375',
+          600: '#006941',
         },
-        // Status colors
-        critical: '#ef4444',
-        high:     '#f97316',
-        medium:   '#eab308',
-        low:      '#22c55e',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['Outfit', 'Inter', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        sans:    ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Space Grotesk', 'Inter', 'sans-serif'],
+        mono:    ['JetBrains Mono', 'monospace'],
+      },
+      borderRadius: {
+        sentinel: '2px',
+        card:     '4px',
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'hero-pattern': "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23f59e0b' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
+        'btn-primary': 'linear-gradient(135deg, #ffba3b 0%, #f4ab04 60%, #604100 100%)',
+        'hero-pattern': "url(\"data:image/svg+xml,%3Csvg width='32' height='32' viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffba3b' fill-opacity='0.03'%3E%3Cpath d='M0 0h1v1H0zm16 0h1v1h-1zM0 16h1v1H0zm16 16h1v1h-1z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
       },
       animation: {
-        'fade-in':    'fadeIn 0.5s ease-out',
-        'slide-up':   'slideUp 0.5s ease-out',
-        'slide-in':   'slideIn 0.4s ease-out',
+        'fade-up':    'fadeUp 0.5s ease-out both',
         'pulse-glow': 'pulseGlow 2s ease-in-out infinite',
-        'float':      'float 3s ease-in-out infinite',
+        'float':      'float 3.5s ease-in-out infinite',
         'shimmer':    'shimmer 2s linear infinite',
+        'scan':       'scanLine 4s linear infinite',
+        'spin-slow':  'spin 3s linear infinite',
       },
       keyframes: {
-        fadeIn:    { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
-        slideUp:   { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
-        slideIn:   { '0%': { opacity: '0', transform: 'translateX(-20px)' }, '100%': { opacity: '1', transform: 'translateX(0)' } },
-        pulseGlow: { '0%, 100%': { boxShadow: '0 0 20px rgba(245,158,11,0.3)' }, '50%': { boxShadow: '0 0 40px rgba(245,158,11,0.6)' } },
-        float:     { '0%, 100%': { transform: 'translateY(0px)' }, '50%': { transform: 'translateY(-8px)' } },
-        shimmer:   { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
+        fadeUp:    { '0%': { opacity: '0', transform: 'translateY(16px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+        pulseGlow: {
+          '0%, 100%': { boxShadow: '0 0 12px rgba(255,186,59,0.25)' },
+          '50%':      { boxShadow: '0 0 28px rgba(255,186,59,0.5)' },
+        },
+        float:   { '0%, 100%': { transform: 'translateY(0px)' }, '50%': { transform: 'translateY(-6px)' } },
+        shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
+        scanLine:{ '0%': { transform: 'translateY(-100%)', opacity: '0.3' }, '100%': { transform: 'translateY(100vh)', opacity: '0' } },
       },
       boxShadow: {
-        'amber-glow': '0 0 30px rgba(245, 158, 11, 0.25)',
-        'amber-lg':   '0 0 60px rgba(245, 158, 11, 0.15)',
-        'inner-navy': 'inset 0 2px 20px rgba(6, 14, 31, 0.5)',
-        'card':       '0 4px 24px rgba(0,0,0,0.4)',
+        'sentinel':   '0px 24px 48px rgba(0, 0, 0, 0.5)',
+        'primary-glow': '0 0 16px 2px rgba(255, 186, 59, 0.35)',
+        'secondary-glow': '0 0 16px 2px rgba(33, 179, 117, 0.25)',
+        // admin back-compat
+        'amber-glow': '0 0 24px rgba(255, 186, 59, 0.3)',
+        'amber-lg':   '0 0 48px rgba(255, 186, 59, 0.15)',
+        'card':       '0px 24px 48px rgba(0,0,0,0.5)',
       },
     },
   },
