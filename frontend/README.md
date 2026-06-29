@@ -1,16 +1,42 @@
-# React + Vite
+# Frontend - POCSO Blockchain Reporting System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the frontend application for the POCSO Blockchain Reporting System, built with **React** and **Vite**, and styled using **Tailwind CSS**.
 
-Currently, two official plugins are available:
+## Design Philosophy: The Sovereign Sentinel
+This application strictly adheres to the "Sovereign Sentinel" design system. It is engineered to convey absolute authority, surgical precision, and ironclad security. 
+- **No SaaS Tropes**: We avoid playful, rounded UI elements.
+- **Color Palette**: Deep, obsidian-like foundations (`#0a0e14`) with high-contrast functional accents (e.g., `#21b375` for verified states).
+- **Typography**: Space Grotesk for display/headlines and Inter for UI/data grids.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+**Please review the root `DESIGN.md` file before making any UI contributions.**
 
-## React Compiler
+## Tech Stack
+- **Framework**: React 19 + Vite
+- **Styling**: Tailwind CSS
+- **Animations**: Framer Motion
+- **Icons**: Lucide React
+- **Utilities**: `exifr` (for secure image metadata handling)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Getting Started
 
-## Expanding the ESLint configuration
+### Prerequisites
+- Node.js (v18 or higher)
+- npm or yarn
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Installation
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Set up environment variables by creating a `.env` file based on your backend configuration.
+
+### Running the Development Server
+```bash
+npm run dev
+```
+The app will be accessible at `http://localhost:5173`.
+
+### Building for Production
+```bash
+npm run build
+```
